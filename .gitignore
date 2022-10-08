@@ -1,2 +1,4 @@
 /deprecated
 /custom_ppocr
+/mlruns
+*mlruns

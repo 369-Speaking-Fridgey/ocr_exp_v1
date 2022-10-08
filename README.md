@@ -1,4 +1,5 @@
 # ocr_exp_v1
+Reference: https://rrc.cvc.uab.es/?ch=13&com=introduction
 ### Experimental repository for Korean OCR 
 #### Paddle Paddle OCR (References)
 1. Text Detection
