@@ -2,7 +2,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import vgg
 import resnet
-# from .pva import PVANet
+from pva import PVANet
 import torch.nn as nn
 def make_layers(branch_name, pretrained = True):
 

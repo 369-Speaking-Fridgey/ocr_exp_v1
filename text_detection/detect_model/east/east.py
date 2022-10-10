@@ -48,6 +48,8 @@ class extractor(nn.Module):
                 x = value(x)
                 if 'layer' in key:
                     out.append(x)
+        elif 'pva' in self.branch_name:
+            out = self.features(x)
         return out
     
 ##===========================Merge Layer=====================================##
@@ -154,7 +156,8 @@ class EAST(nn.Module):
 if __name__ == "__main__":
     # layer = make_layers('vgg19')
     # print(layer)
-    model = EAST(branch_name = 'resnet152')
+    # model = EAST(branch_name = 'pva')
+    model = EAST(branch_name = 'vgg16')
     x = torch.randn(1, 3, 512, 512)
     score, geo = model(x)
     print(score.shape, geo.shape)        
