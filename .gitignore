@@ -2,3 +2,8 @@
 /custom_ppocr
 /mlruns
 *mlruns
+*.ckpt
+*lightning_logs
+*raw
+/configs
+*mlflow_test
