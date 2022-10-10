@@ -6,7 +6,9 @@
 - [X] Overal Geometry Loss
 - [X] Pretrained Backbones (VGG, RESNET)
 - [X] EAST Model Implementation
-- [ ] Dataset Utils
+- [X] Score and geo map utils Code
+- [ ] Dataset Code
 - [ ] Training Code
 - [ ] Evaluation Code
 - [ ] Pre-Training PVANet with IMAGENET Dataset 
+- [ ] Connect MLFlow & ONNX for model deployment and experiments
