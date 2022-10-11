@@ -121,15 +121,17 @@ class merge(nn.Module):
         
 ##===========================Output Layer====================================##
 class output(nn.Module):
-    def __init__(self, scope = 512):
+    def __init__(self, scope = 512, geo_type = 'rbox'):
         super(output, self).__init__()
         self.conv1 = nn.Conv2d(32, 1, 1)
         self.sigmoid1 = nn.Sigmoid()
-        self.conv2 = nn.Conv2d(32, 4, 1)
+        self.conv2 = nn.Conv2d(32, 4, 1) if geo_type.upper() == 'RBOX' else nn.Conv2d(32, 8, 1)
         self.sigmoid2 = nn.Sigmoid()
-        self.conv3 = nn.Conv2d(32, 1, 1)
-        self.sigmoid3 = nn.Sigmoid()
+        if geo_type == 'rbox':
+            self.conv3 = nn.Conv2d(32, 1, 1)
+            self.sigmoid3 = nn.Sigmoid()
         self.scope = scope
+        self.geo_type = geo_type
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode = 'fan_out', nonlinearity='relu')
@@ -137,18 +139,21 @@ class output(nn.Module):
                     nn.init.constant_(m.bias, 0)
     def forward(self, x):
         score = self.sigmoid1(self.conv1(x))
-        loc = self.sigmoid2(self.conv2(x)) * self.scope
-        angle = (self.sigmoid3(self.conv3(x)) - 0.5) * math.pi
-        geo = torch.cat((loc, angle), 1)
+        geo = self.sigmoid2(self.conv2(x)) * self.scope
+        
+        if self.geo_type.upper() == 'RBOX':
+            angle = (self.sigmoid3(self.conv3(x)) - 0.5) * math.pi
+            geo = torch.cat((geo, angle), 1)
         return score, geo
 
 ##========================EAST Model==========================================##
 class EAST(nn.Module):
-    def __init__(self,branch_name, output_scope = 512, pretrained_bbone = True, freeze_bbone = False):
+    def __init__(self,branch_name, geo_type,
+                 output_scope = 512, pretrained_bbone = True, freeze_bbone = False, **kwargs):
         super(EAST, self).__init__()
         self.extractor = extractor(branch_name, pretrained = pretrained_bbone)
         self.merge = merge(branch_name)
-        self.output = output(scope = output_scope)
+        self.output = output(scope = output_scope, geo_type = geo_type)
     def forward(self, x):
         return self.output(self.merge(self.extractor(x)))
     
@@ -157,7 +162,7 @@ if __name__ == "__main__":
     # layer = make_layers('vgg19')
     # print(layer)
     # model = EAST(branch_name = 'pva')
-    model = EAST(branch_name = 'vgg16')
+    model = EAST(branch_name = 'vgg16', geo_type = 'quad')
     x = torch.randn(1, 3, 512, 512)
     score, geo = model(x)
     print(score.shape, geo.shape)        

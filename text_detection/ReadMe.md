@@ -7,6 +7,7 @@
 - [X] Pretrained Backbones (VGG, RESNET)
 - [X] EAST Model Implementation
 - [X] Score and geo map utils Code
+- [ ] Code for the geo and score map generation
 - [ ] Dataset Code
 - [ ] Training Code
 - [ ] Evaluation Code

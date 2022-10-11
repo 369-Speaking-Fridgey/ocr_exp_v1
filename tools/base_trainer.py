@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class BaseTrainer:
     def __init__(self, 
@@ -19,9 +21,13 @@ class BaseTrainer:
         pass
     def run(self, train_dataloader, test_dataloader, ):
         pass
-    def evaluate(self, eval_dataloader);
+    def evaluate(self, eval_dataloader):
         pass
     def run_one_epoch(self, epoch, ):
         pass
     def save(self, is_last = False):
         pass
+    
+    
+if __name__ == "__main__":
+    from text_detection import detect_model as detect_model
