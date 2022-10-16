@@ -19,6 +19,7 @@ def geo_loss(gt_geo, pred_geo):
     angle_loss_map = 1 - torch.cos(angle_pred - angle_gt) ## loss of rotation angle
     return iou_loss_map, angle_loss_map
 
+
 class Loss(nn.Module):
     def __init__(self, weight_angle = 10):
         super(Loss, self).__init__()

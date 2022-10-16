@@ -40,3 +40,11 @@ recipt_ocr: recipe 이미지에 있는 모든 문자는 텍스트로 인식해�
 text_localization: CRAFT, EAST, DBNet등과 같은 모델을 사용해서 text 영역의 bounding box 찾기
     |__ DBNet: Differentiable Binarization
 ```
+
+
+#### for tracking the model with mlflow..
+1. go to your main project folder `/ocr_exp_v1`
+2. run the command below and browse to `http://127.0.0.1:5000/#/experiments/1`
+```
+mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root $(pwd)/artifacts
+```
