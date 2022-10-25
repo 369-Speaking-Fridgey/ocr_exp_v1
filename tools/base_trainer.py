@@ -39,10 +39,10 @@ class BaseTrainer:
         
     def exp_setup(self):
         self.mlops = ManagedMLFlow(
-            self.mlops_cfg['experiment_name'],
-            self.mlops_cfg['run_name'] + f" {self.model_cfg['model_name']}",
-            self.mlops_cfg['user_name'],
-            self.mlops_cfg['tracking_uri']
+            experiment_name = self.mlops_cfg['experiment_name'],
+            run_name = self.mlops_cfg['run_name'] + f" {self.model_cfg['model_name']}",
+            user_name = self.mlops_cfg['user_name'],
+            tracking_uri = self.mlops_cfg['tracking_uri']
         )
         mlflow.log_params({'train_cfg': self.train_cfg,
                            'model_cfg': self.model_cfg,

@@ -1,11 +1,19 @@
 ## contains the functions needed for generating the dataset
+## 이 함수들은 모두 EAST 모델의 데이터셋을 만들기 위해서 필요하다.
+## 근데 당분간은 GEO map는 사용하지 않을 계획이기 때문에...
 # 원래는 QUARD만 사용하려 했었는데 PVANET + RBOX가 성능이 제일 좋았음이 증명되었기에 RBOX를 사용할 예정이다.
-import numpy as np
 import math
 import json
+import numpy as np
 from shapely.geometry import Polygon
 import cv2
+import os
 from PIL import Image
+
+def cal_distance(x1, y1, x2, y2):
+    ```Calculate the Euclidian Distance (=L2 Distance)```
+    dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+    return dist
 
 def get_rotate_mat(theta):
     return np.array([

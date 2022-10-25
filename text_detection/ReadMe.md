@@ -1,6 +1,9 @@
 1. https://ietresearch.onlinelibrary.wiley.com/doi/epdf/10.1049/iet-cvi.2019.0916
 2. https://arxiv.org/pdf/1911.08947.pdf
 
+#### SETUP
+- nms and bbox utils are written in cython, so you must build the library first
+
 
 #### TODO LIST
 - [X] Overal Geometry Loss

@@ -26,10 +26,12 @@ class TrainerEntry():
         train_cfg = OmegaConf.to_container(cfg['train_configuration'])
         mlops_cfg = OmegaConf.to_container(cfg['mlops_configuration'])
         
+        ## (1) LOAD THE TRAINER
         trainer = importlib.import_module(mode_registery[model_cfg['mode']][3]).Trainer(
             data_cfg, model_cfg, mlops_cfg, train_cfg
         )
         
+        ## (2) LOAD THE DATASET & DATALOADER
         dataset = importlib.import_module(mode_registery[model_cfg['mode']][2])
         train_dataset = dataset.Dataset(data_cfg, mode = 'train')
         train_dataloader = DataLoader(train_dataset, batch_size = data_cfg['batch_size'], shuffle = True)

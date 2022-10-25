@@ -10,7 +10,11 @@ import math
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from detect_model.east.east import EAST
-
+"""
+- 이 파일은 EAST 모델의 출력값을 사용해서 bounding box를 만들기 위한,
+- 말 그대로 detection을 위해서 필요한 함수들이 있다.
+--> detect(image, model, device)를 사용해서 모든 결과를 확인할 수 있다.
+"""
 def resize_img(image):
     ## 이미지의 각 변의 길이가 32로 나누어 떨어질 수 있도록 한다.
     w, h = image.size

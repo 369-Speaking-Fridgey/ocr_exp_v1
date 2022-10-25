@@ -52,5 +52,9 @@ class CTPN(nn.Module):
         vertical_pred = self.vertical_cord(x) ## (B, 40, H', W')
         score = self.score(x) ## (B, 20, H', W')
         side_refinement = self.side_refinement(x) ## (B, 10, H', W')
-        
+        """
+        - score: text/nontext score
+        - vertical_pred: vertical coordinates
+        - side_refinement: side-refinement offset
+        """
         return score, vertical_pred, side_refinement
