@@ -6,6 +6,7 @@ import os, sys
 import mlflow
 ARTIFACT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ARTIFACT_DIR)
+## mlflow를 연결하기 위해서 원래대로라면 registered uri를 지정해 주었어야 했는데 그러지 못했음
 class ManagedMLFlow:
     def __init__(self, experiment_name, run_name, user_name, tracking_uri):
         super(ManagedMLFlow, self).__init__()
@@ -43,15 +44,16 @@ class BaseTrainer:
             run_name = self.mlops_cfg['run_name'] + f" {self.model_cfg['model_name']}",
             user_name = self.mlops_cfg['user_name'],
             tracking_uri = self.mlops_cfg['tracking_uri']
-        )
+        ) ## setup the mlflow 
         mlflow.log_params({'train_cfg': self.train_cfg,
                            'model_cfg': self.model_cfg,
                            'data_cfg': self.data_cfg})
-        mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
+        # mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
 
     
     def build(self):
         pass
+
     def run(self, train_dataloader, eval_dataloader):
         self.build()
         self.train_dataloader = train_dataloader
