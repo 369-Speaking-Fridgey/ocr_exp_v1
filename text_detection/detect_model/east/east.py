@@ -150,12 +150,12 @@ class output(nn.Module):
 
 ##========================EAST Model==========================================##
 class EAST(nn.Module):
-    def __init__(self,branch_name, geo_type,
+    def __init__(self,branch_name = 'vgg19_bn', geo_type = 'rbox',
                  output_scope = 512, pretrained_bbone = True, freeze_bbone = False, **kwargs):
         super(EAST, self).__init__()
-        self.extractor = extractor(branch_name, pretrained = pretrained_bbone)
+        self.extractor = extractor(branch_name, pretrained = pretrained_bbone) ## extractor로는 사전 학습된 모델을 사용한다.
         if freeze_bbone:
-            self.extracgtor.eval()
+            self.extractor.eval()
         self.merge = merge(branch_name)
         self.output = output(scope = output_scope, geo_type = geo_type)
     def forward(self, x):

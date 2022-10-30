@@ -29,6 +29,7 @@ def resize_img(image):
 
 def pil_to_tensor(image):
     ## input image should be a PIL image
+    ```Convert PIL Image to torch.tensor```
     aug = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean = (0.5,0.5,0.5), std = (0.5,0.5,0.5))
@@ -50,6 +51,7 @@ def get_rotate_mat(theta):
     ])
     
 def restore_polys(valid_pos, valid_geo, score_shape, scale = 4):
+    ```Restore polys from feature maps in given positions```
     polys, index = [], []
     valid_pos *= scale
     d = valid_geo[:4, :]
@@ -73,6 +75,7 @@ def restore_polys(valid_pos, valid_geo, score_shape, scale = 4):
     return np.array(polys), index
 
 def get_boxes(score, geo, score_thresh = 0.9, nms_thresh = 0.2):
+    ```get boxes from feature map```
     score = score[0, :, :]
     xy_text = np.argwhere(score > score_thresh)
     if xy_text.size == 0:
@@ -99,6 +102,7 @@ def adjust_ratio(boxes, ratio_w, ratio_h):
     return np.around(boxes)
 
 def detect(image, model, device):
+    ```For Clean Generation of the Bounding box based on the east model output```
     image, ratio_h, ratio_w = resize_img(image)
     model.cuda()
     with torch.no_grad():
