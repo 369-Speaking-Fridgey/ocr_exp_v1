@@ -47,7 +47,8 @@ def add_rotation(img, max_theta):
 ## 우선은 AI HUB의 데이터를 사용한다고 생각을 해도 나쁘지 않을 것이다. 적어도 text detection & recognition에 관해서는 말이다.
 ##################EAST DATASET UTILS######################################
 ##========(1) Extract Vertices==========##
-def extract_vertices(file_url):
+def extract_vertices(file_url, symbol = False):
+    # 만약에 symbol = False로 둔다면 
     ```Extract the vertices from the json & txt files```
     response = requests.get(file_url)
     with open(BytesIO(response.content), 'r') as f:
