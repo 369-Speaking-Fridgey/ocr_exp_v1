@@ -1,1 +1,0 @@
-## VGG, RCNN, RESNET ##
