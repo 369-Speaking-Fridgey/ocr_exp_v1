@@ -20,9 +20,9 @@ def geo_loss(gt_geo, pred_geo):
     return iou_loss_map, angle_loss_map
 
 
-class EastLoss(nn.Module):
+class EASTLoss(nn.Module):
     def __init__(self, weight_angle = 10):
-        super(EastLoss, self).__init__()
+        super(EASTLoss, self).__init__()
         self.weight_angle = weight_angle
     
     def forward(self, gt_score, pred_score, gt_geo, pred_geo, ignored_map):

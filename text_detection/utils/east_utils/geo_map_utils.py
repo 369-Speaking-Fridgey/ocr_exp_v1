@@ -11,7 +11,7 @@ import os
 from PIL import Image
 
 def cal_distance(x1, y1, x2, y2):
-    ```Calculate the Euclidian Distance (=L2 Distance)```
+    '''Calculate the Euclidian Distance (=L2 Distance)'''
     dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
     return dist
 
