@@ -1,11 +1,13 @@
 from east.east import EAST
 from ctpn.ctpn import CTPN
+from textfuse.textfuse import TEXTFUSE
 from loguru import logger
 import torch
 
 model_registry = {
     'EAST': EAST,
-    'CTPN': CTPN
+    'CTPN': CTPN,
+    'TEXTFUSE': TEXTFUSE,
 }
 
 def load_model(model_name, model_cfg):
