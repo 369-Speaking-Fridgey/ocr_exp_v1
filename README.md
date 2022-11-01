@@ -9,16 +9,20 @@ Reference: https://rrc.cvc.uab.es/?ch=13&com=introduction
 #### Text Detection
 1. CRAFT: Character-Region Awareness For Text Detection
 2. EAST: Efficient and Accurate Scene Text Detection
+3. TextFuse
 
 #### Text Recognition
-1. Decoupled Attention Network
-2. Backbone
-3. Neck
-4. Head
+1. Simple Text Recognition Model (based on the Naver CLOVA text detector) -> Used for experiment as the BASELINE
+    1. Transformation
+    2. Feature Extraction
+    3. Sequence Modeling
+    4. Classification
+2. HangulNet
+    : Best for Korean Language text recognition, since it is based on `grapheme-level classification`
 
 ```
 ## all the configs folder contains the configuration files to differentiate the training settings
-key_info_extraction: Pre-trained BERT, 혹은 RoBERTa 모델로 classification을 하려 한다.
+#### key_info_extraction: Pre-trained BERT, 혹은 RoBERTa 모델로 classification을 하려 한다. - 또는 개체명 인식을 통해서 classification
     |__ model
         |__ transformer: Loads the pretrained
         |__ classifier
