@@ -26,11 +26,12 @@ scheduler_registry = {
 
 class Trainer(BaseTrainer):
     def build(self):
+        self.current_metric = {}
         ## build the model, optimizer, schduler, loss functions, etc ..
         mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path = "code")
         self.model = DetectModel.load_model(self.model_cfg['name'], self.model_cfg).cuda()
-        self.loss = DetectLoss.load_loss(self.train_cfg)
-
+        self.criterion = DetectLoss.load_loss(self.train_cfg) ## 모델별로 지정된 손실 함수를 불로오기 위해서 사용
+        
         self.optimizer = optimizer_registry[self.train_cfg['optimizer']['name'].upper()](
             params = self.model.parameters(), lr = self.train_cfg['optimizer']['lr']
         )
@@ -40,5 +41,34 @@ class Trainer(BaseTrainer):
 
     def run(self, train_dataloader, eval_dataloader):
         logger.info("===> connected to detection trainer ===>")
+        self.train_dataloader = train_dataloader
+        self.eval_dataloader = eval_dataloader
+        self.losses = []
+        self.model.train()
+        for epoch in range(self.total_epochs):
+            train_loop = tqmd(self.train_dataloader)
+            for idx, batch in enumerate(train_loop):
+                img, gt_score = batch
+                pred_score, pred_geo = self.model(img) 
+                ## (B, 1, W, H) (B, 5, W, H)
+                
+                loss = self.criterion[0](pred_score, bbox)
+                
+                
+                
         return
+    def start_first_epoch(self, current_epoch):
+        pass
+    def save(self,  last = False):
+        '''
+        Function for saving the model weights if best model or if it is the last epoch
+        '''
+        pass
+    def evaluate(self, root_path= './results'):
+        self.model.eval()
+        with torch.no_grad():
+            loop = tqdm(self.eval_dataloader)
+            for idx, batch in enumerate(loop):
+                img, bbox = batch
+        pass
         

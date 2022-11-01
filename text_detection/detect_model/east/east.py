@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torchvision import models
 import os, sys
 import math
+from loguru import logger
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE)
 from backbones import make_layers, get_channels
@@ -159,14 +160,25 @@ class EAST(nn.Module):
         self.merge = merge(branch_name)
         self.output = output(scope = output_scope, geo_type = geo_type)
     def forward(self, x):
-        return self.output(self.merge(self.extractor(x)))
+        x = self.extractor(x)
+        for o in x:
+            logger.info(o.shape)
+        x = self.merge(x)
+        logger.info(x.shape)
+        x = self.output(x)
+        return x
     
     
 if __name__ == "__main__":
     # layer = make_layers('vgg19')
     # print(layer)
     # model = EAST(branch_name = 'pva')
-    model = EAST(branch_name = 'vgg16', geo_type = 'quad')
+    model = EAST(branch_name = 'vgg16', geo_type = 'rbox')
+    """
+    RBox를 geometry type으로 사용하게 됨에 따라서 결과적으로 angle + bounding box에 해당하는 
+    channel로 이루어져 있는 output feature map을 모델이 출력하게 된다.
+    """
+    
     x = torch.randn(1, 3, 512, 512)
     score, geo = model(x)
     print(score.shape, geo.shape)        

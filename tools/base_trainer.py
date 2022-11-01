@@ -7,6 +7,7 @@ import mlflow
 ARTIFACT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ARTIFACT_DIR)
 ## mlflow를 연결하기 위해서 원래대로라면 registered uri를 지정해 주었어야 했는데 그러지 못했음
+
 class ManagedMLFlow:
     def __init__(self, experiment_name, run_name, user_name, tracking_uri):
         super(ManagedMLFlow, self).__init__()
@@ -58,6 +59,7 @@ class BaseTrainer:
         self.build()
         self.train_dataloader = train_dataloader
         self.eval_dataloader = eval_dataloader
+        self.total_epochs = self.train_cfg['epochs']
         self.eval_epochs = self.train_cfg['eval_epoch']
         pass
     def evaluate(self, eval_dataloader):
