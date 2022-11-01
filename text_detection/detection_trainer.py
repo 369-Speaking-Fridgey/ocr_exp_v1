@@ -34,6 +34,8 @@ class Trainer(BaseTrainer):
         self.optimizer = optimizer_registry[self.train_cfg['optimizer']['name'].upper()](
             params = self.model.parameters(), lr = self.train_cfg['optimizer']['lr']
         )
+        ## 당분간은 scheduler은 사용하지 않기로 하자
+        
 
 
     def run(self, train_dataloader, eval_dataloader):
