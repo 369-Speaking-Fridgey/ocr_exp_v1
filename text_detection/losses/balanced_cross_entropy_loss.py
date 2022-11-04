@@ -14,7 +14,7 @@ class BalanceCrossEntropyLoss(nn.Module):
         gt: (N, 1, H, W) - the target
         mask: (N, H, W) - the mask indicates the positive regions
         """
-        positive = (gt[:, 0, :, :] * ,mask).byte()
+        positive = (gt[:, 0, :, :] * mask).byte()
         negative = ((1 - gt[:, 0, :, :]) * mask).byte()
         pos_count = int(positive.float().sum())
         neg_count = min(int(negative.float().sum()), 

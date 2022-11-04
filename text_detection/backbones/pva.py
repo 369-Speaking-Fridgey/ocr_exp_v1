@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class ConvLayer(nn.Module):
     def __init__(self, ch_in, ch_out, kernel_size):
         super(ConvLayer, self).__init__()
@@ -80,6 +81,7 @@ class PVANet(nn.Module):
 class PVA(nn.Module):
     def __init__(self, ch_in = 3, channels = [16, 64, 128, 256, 384],
                  class_n = 1000):
+        super(PVA, self).__init__()
         self.features = PVANet(ch_in, channels)
         self.avgpool = nn.AdaptivaAvgPool2d(7)
         self.classifier = nn.Sequential(
@@ -98,3 +100,72 @@ class PVA(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
+    
+
+
+
+if __name__ == "__main__":
+    import os, sys
+    from torchvision.datasets import ImageNet
+    from torch.utils.data import DataLoader
+    from torchmetrics import Accuracy
+    from loguru import logger
+    import torch
+    import torch.nn as nn
+    from tqdm import tqdm
+    
+    train_dataset = ImageNet(root = '', split = 'train')
+    test_dataset = ImageNet(root = '', split = 'val')
+    train_dataloader = DataLoader(train_dataset, batch_size = 32, shuffle = True)
+    test_dataloader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
+    
+    EPOCH = 1000
+    EVAL_EPOCH = 50
+    BEST_ACC = 0.0
+    WEIGHT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'weight')
+    model = PVA().cuda()
+    optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
+    criterion = nn.CrossEntropyLoss(reduction = 'mean')
+    metric = Accuracy()
+    
+    for epoch in range(EPOCH):
+        model.train()
+        train_loop = tqdm(train_dataloader)
+        for idx, batch in enumerate(train_loop):
+            image, label = batch
+            image, label = image.cuda(), label.cuda()
+            predict = model(image)
+            loss = criterion(input = predict, target = label)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_loop.set_postfix({"LOSS" : loss.item()})
+            
+        if (epoch +1) % EVAL_EPOCH == 0:
+            model.eval()
+            run_acc = 0.0
+            with torch.no_grad():
+                eval_loop = tqdm(test_dataloader)
+                
+                for idx, batch in enumerate(eval_loop):
+                    image, label = batch
+                    image, label = image.cuda(), label.cuda()
+                    predict = model(image)
+                    acc = metric(predict, label)
+                    run_acc += acc
+                    eval_loop.set_postfix({"ACCURACY" : acc})
+                    
+            if run_acc > BEST_ACC:
+                BEST_ACC = run_acc
+                torch.save(model.state_dict(), os.path.join(WEIGHT_PATH, 'best_pva.pth'))
+                logger.info("SAVED BEST MODEL..")
+    
+    torch.save(model.state_dict(), os.path.join(WEIGHT_PATH, 'last_pva.pth'))
+            
+                
+                
+            
+        
+        
+    
+    

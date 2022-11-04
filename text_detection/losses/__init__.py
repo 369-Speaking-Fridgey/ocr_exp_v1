@@ -1,14 +1,14 @@
-from balanced_cross_entropy_loss import BalancedCrossEntropyLoss
-from dice_loss import *
-from iou_loss import *
-from l1_loss import MaskL1Loss, BalanceL1Loss
-from east_loss import dice_loss, geo_loss, EASTLoss
-from ctpn_loss import CTPNLoss
+from .balanced_cross_entropy_loss import BalanceCrossEntropyLoss
+from .dice_loss import *
+from .iou_loss import *
+from .l1_loss import MaskL1Loss, BalanceL1Loss
+from .east_loss import dice_loss, geo_loss, EASTLoss
+from .ctpn_loss import CTPNLoss
 
 loss_registry = {
     "EASTLOSS": EASTLoss,
     "CTPNLOSS": CTPNLoss,
-    "BALANCEDCE": BalancedCrossEntropyLoss,
+    "BALANCEDCE": BalanceCrossEntropyLoss,
     "BALNCEDL1": BalanceL1Loss,
     "MASKL1": MaskL1Loss
 

@@ -154,6 +154,8 @@ class EAST(nn.Module):
     def __init__(self,branch_name = 'vgg19_bn', geo_type = 'rbox',
                  output_scope = 512, pretrained_bbone = True, freeze_bbone = False, **kwargs):
         super(EAST, self).__init__()
+        ## 만약에 vgg19등과 같은 모델을 사용하면 사전학습 되어 있고, 그게 아니라 PVANet을 사용하면 (이게 제일 논문상으로 점수가 높음)
+        # 사전학습되어 있지 않다. 따라서 baseline으로 vgg19를 쓰고 차후에 IMAGENET으로 PVA를 학습시키던가 해야 한다.
         self.extractor = extractor(branch_name, pretrained = pretrained_bbone) ## extractor로는 사전 학습된 모델을 사용한다.
         if freeze_bbone:
             self.extractor.eval()

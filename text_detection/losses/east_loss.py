@@ -29,7 +29,7 @@ class EASTLoss(nn.Module):
         if torch.sum(gt_score) < 1:
             return torch.sum(pred_score + pred_geo) * 0
         
-        classify_loss = dice_loss(gt_score, pred_score)
+        classify_loss = dice_loss(gt_score, pred_score * (1-ignored_map))   ## 어느 영역이 text를 포함하고 있는 영역인지에 대한 점수를 계산한다.
         iou_loss_map, angle_loss_map = geo_loss(gt_geo, pred_geo)
         
         angle_loss = torch.sum(angle_loss_map * gt_score) / torch.sum(gt_score)

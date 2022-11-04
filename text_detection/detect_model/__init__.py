@@ -1,6 +1,6 @@
-from east.east import EAST
-from ctpn.ctpn import CTPN
-from textfuse.textfuse import TEXTFUSE
+from .east.east import EAST
+from .ctpn.ctpn import CTPN
+from .textfuse.textfuse import TEXTFUSE
 from loguru import logger
 import torch
 
