@@ -13,3 +13,7 @@ __pycache__
 /home/ubuntu/user/jihye.lee/ocr_exp_v1/artifacts/*
 /artifacts
 /results
+venv/*
+new_pytorch/*
+/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/venv/*
+/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/new_pytorch/*
