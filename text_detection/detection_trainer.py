@@ -33,6 +33,15 @@ class Trainer(BaseTrainer):
         ## build the model, optimizer, schduler, loss functions, etc ..
         mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path = "code")
         self.model = DetectModel.load_model(self.model_cfg['name'], self.model_cfg).cuda()
+        
+        if self.model_cfg['pretrained_model'] != '':
+            pretrained = torch.load(self.model_cfg['pretrained_model'])
+            org = self.model.state_dict()
+            new = {key:value for key, value in pretrained.items() if key in org and \
+                            value.shape == pretrianed[key].shape}
+            org.update(new)
+            self.model.load_state_dict(org)
+            
         self.criterion = DetectLoss.load_loss(self.train_cfg) ## 모델별로 지정된 손실 함수를 불로오기 위해서 사용
         
         self.optimizer = optimizer_registry[self.train_cfg['optimizer']['name'].upper()](

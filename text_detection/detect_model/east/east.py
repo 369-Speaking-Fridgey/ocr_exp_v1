@@ -151,7 +151,7 @@ class output(nn.Module):
 
 ##========================EAST Model==========================================##
 class EAST(nn.Module):
-    def __init__(self,branch_name = 'vgg19_bn', geo_type = 'rbox',
+    def __init__(self,branch_name = 'vgg16_bn', geo_type = 'rbox',
                  output_scope = 512, pretrained_bbone = True, freeze_bbone = False, **kwargs):
         super(EAST, self).__init__()
         ## 만약에 vgg19등과 같은 모델을 사용하면 사전학습 되어 있고, 그게 아니라 PVANet을 사용하면 (이게 제일 논문상으로 점수가 높음)
@@ -175,13 +175,22 @@ if __name__ == "__main__":
     # layer = make_layers('vgg19')
     # print(layer)
     # model = EAST(branch_name = 'pva')
-    model = EAST(branch_name = 'vgg16', geo_type = 'rbox')
+    model = EAST(branch_name = 'vgg16_bn', geo_type = 'rbox')
     """
     RBox를 geometry type으로 사용하게 됨에 따라서 결과적으로 angle + bounding box에 해당하는 
     channel로 이루어져 있는 output feature map을 모델이 출력하게 된다.
     """
+    device = torch.device('cuda')
+    model.to(device)
+    x = torch.randn(1, 3, 512, 512).to(device)
     
-    x = torch.randn(1, 3, 512, 512)
+    pretrained = torch.load('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/east_vgg16.pth')
+    org = model.state_dict()
+    new = {key: value for key, value in pretrained.items() if key in org and \
+                    value.shape == pretrained[key].shape}
+    org.update(new)
+    print(new.keys())
+    model.load_state_dict(org)
     score, geo = model(x)
     print(score.shape, geo.shape)        
         
