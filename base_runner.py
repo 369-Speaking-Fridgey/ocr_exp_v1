@@ -32,11 +32,11 @@ class TrainerEntry():
         )
         
         ## (2) LOAD THE DATASET & DATALOADER
-        dataset = importlib.import_module(mode_registery[model_cfg['mode']][2])
-        train_dataset = dataset.Dataset(data_cfg, mode = 'train')
+        # dataset = importlib.import_module(mode_registery[model_cfg['mode']][2])
+        train_dataset = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'train')
         train_dataloader = DataLoader(train_dataset, batch_size = data_cfg['batch_size'], shuffle = True)
         
-        eval_dataset = dataset.Dataset(data_cfg, mode = 'eval')
+        eval_dataset = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'eval')
         eval_dataloader = DataLoader(eval_dataset, batch_size = 1, shuffle = False)
         
         
