@@ -58,3 +58,9 @@ class CTPN(nn.Module):
         - side_refinement: side-refinement offset
         """
         return score, vertical_pred, side_refinement
+    
+if __name__ == "__main__":
+    sample = torch.rand((1, 3, 128, 128))
+    model = CTPN()
+    score, vertical_coord, offset = model(sample)
+    print(score.shape, vertical_coord.shape, offset.shape)
