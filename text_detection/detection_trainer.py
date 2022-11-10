@@ -10,6 +10,8 @@ from tools.base_trainer import BaseTrainer
 from loguru import logger
 from torchmetrics.functional import precision_recall
 from torchmetrics.functional import f1_score as F1
+from utils.east_utils import east_detect
+from utils.ctpn_utils import ctpn_detect
 
 ARTIFACT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ## DETECTION TRAINER ##
@@ -33,6 +35,16 @@ class Trainer(BaseTrainer):
         ## build the model, optimizer, schduler, loss functions, etc ..
         mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path = "code")
         self.model = DetectModel.load_model(self.model_cfg['name'], self.model_cfg).cuda()
+        
+        ## (1) LOAD THE PRETRAINED MODEL WEIGHTS
+        if self.model_cfg['pretrained_model'] != '':
+            pretrained = torch.load(self.model_cfg['pretrained_model'])
+            org = self.model.state_dict()
+            new = {key:value for key, value in pretrained.items() if key in org and \
+                            value.shape == pretrianed[key].shape}
+            org.update(new)
+            self.model.load_state_dict(org)
+            
         self.criterion = DetectLoss.load_loss(self.train_cfg) ## 모델별로 지정된 손실 함수를 불로오기 위해서 사용
         
         self.optimizer = optimizer_registry[self.train_cfg['optimizer']['name'].upper()](
@@ -53,11 +65,16 @@ class Trainer(BaseTrainer):
             epoch_loss = 0.0
             train_loop = tqdm(self.train_dataloader)
             for idx, batch in enumerate(train_loop):
-                img, gt_score, gt_geo, gt_ignore = batch
-                img, gt_score, gt_geo, gt_ignore = img.cuda(), gt_score.cuda(), gt_geo.cuda(), gt_ignore.cuda()
-                pred_score, pred_geo = self.model(img) 
-                ## (B, 1, W, H) (B, 5, W, H)
-                loss = self.criterion[0](gt_score, pred_score, gt_geo, pred_geo, gt_ignore)
+                
+                if self.model_cfg['model_name'].upper() == 'EAST':
+                    img, gt_score, gt_geo, gt_ignore = batch
+                    img, gt_score, gt_geo, gt_ignore = img.cuda(), gt_score.cuda(), gt_geo.cuda(), gt_ignore.cuda()
+                    pred_score, pred_geo = self.model(img) 
+                    ## (B, 1, W, H) (B, 5, W, H)
+                    loss = self.criterion[0](gt_score, pred_score, gt_geo, pred_geo, gt_ignore)
+                elif self.model_cfg['model_name'].upper() == 'CTPN':
+                    pass
+                
                 epoch_loss += loss.item()
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -90,30 +107,26 @@ class Trainer(BaseTrainer):
             loop = tqdm(self.eval_dataloader)
             pr_score, pr_geo, f1_score, f1_geo = 0.0, 0.0, 0.0, 0.0
             for idx, batch in enumerate(loop):
-                img, gt_score, gt_geo, gt_ignore = batch
-                img, gt_score, gt_geo, gt_ignore = img.cuda(), gt_score.cuda(), gt_geo.cuda(), gt_ignore.cuda()
-                pred_score, pred_geo = self.model(img)
-                if idx in idxs:
-                    self.make_sample_detect(pred_score, pred_geo, img)
+                if self.model_cfg['model_name'].upper() == 'EAST':
+                    img, gt_score, gt_geo, gt_ignore = batch
+                    img, gt_score, gt_geo, gt_ignore = img.cuda(), gt_score.cuda(), gt_geo.cuda(), gt_ignore.cuda()
+                    pred_score, pred_geo = self.model(img)
+                    if idx in idxs:
+                        east_detect.detect_sample(pred_score, pred_geo, img)
                 
-                pr_score += precision_recall(preds = pred_score, target = gt_score, average = 'micro')
-                pr_geo += precision_recall(preds = pred_geo, target = gt_geo, average = 'micro')
-                f1_score += F1(preds = pred_score, target = gt_score, average = 'micro')
-                f1_geo += F1(preds =  pred_geo, target = gt_geo, average = 'micro')
+                    pr_score += precision_recall(preds = pred_score, target = gt_score, average = 'micro')
+                    pr_geo += precision_recall(preds = pred_geo, target = gt_geo, average = 'micro')
+                    f1_score += F1(preds = pred_score, target = gt_score, average = 'micro')
+                    f1_geo += F1(preds =  pred_geo, target = gt_geo, average = 'micro')
                 
-            self.current_metric_dict = {
-                    "Score Precision Recall": pr_score / len(loop),
-                    "Geo Precision Recall": pr_geo / len(loop),
-                    "Score F1": f1_score / len(loop),
-                    "Geo F1": f1_geo / len(loop)
-                }
-        
-    def make_sample_detects(self, pred_score, pred_geo, image):
-        '''
-        Function to generate the correct bounding box based on the prediction score map
-        and the prediction geo map and draw the bounding boxes on the original input image
-        '''
-        pass
-        
-        
+                    self.current_metric_dict = {
+                        "Score Precision Recall": pr_score / len(loop),
+                        "Geo Precision Recall": pr_geo / len(loop),
+                        "Score F1": f1_score / len(loop),
+                        "Geo F1": f1_geo / len(loop)
+                        }   
+                
+                elif self.model_cfg['model_name'].upper() == 'CTPN':
+                    pass
+
         

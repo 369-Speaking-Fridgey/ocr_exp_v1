@@ -80,10 +80,10 @@ class PVANet(nn.Module):
     
 class PVA(nn.Module):
     def __init__(self, ch_in = 3, channels = [16, 64, 128, 256, 384],
-                 class_n = 1000):
+                 class_n = 200):
         super(PVA, self).__init__()
         self.features = PVANet(ch_in, channels)
-        self.avgpool = nn.AdaptivaAvgPool2d(7)
+        self.avgpool = nn.AdaptiveAvgPool2d(7)
         self.classifier = nn.Sequential(
             nn.Linear(channels[-1] * 7 * 7, 4096),
             nn.ReLU(inplace = True),
@@ -96,7 +96,7 @@ class PVA(nn.Module):
     
     def forward(self, x):
         x = self.features(x)
-        x = self.avgpool(x)
+        x = self.avgpool(x[-1])
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
@@ -105,27 +105,63 @@ class PVA(nn.Module):
 
 
 if __name__ == "__main__":
-    import os, sys
     from torchvision.datasets import ImageNet
     from torch.utils.data import DataLoader
+    import torchvision.transforms as Transforms
     from torchmetrics import Accuracy
     from loguru import logger
+    from datasets import load_dataset
     import torch
     import torch.nn as nn
+    import os, sys
     from tqdm import tqdm
     
-    train_dataset = ImageNet(root = '', split = 'train')
-    test_dataset = ImageNet(root = '', split = 'val')
+    class DataSet(torch.utils.data.Dataset):
+      def __init__(self, name, split):
+        super(DataSet, self).__init__()
+        self.dataset = load_dataset(name, split, use_auth_token = True)[split]
+        self.split = split
+      def __len__(self,):
+        return len(self.dataset)
+      
+      def __getitem__(self, idx):
+        image = self.dataset[idx]['image']
+        label = self.dataset[idx]['label']
+        post_transform = Transforms.Compose([Transforms.Normalize(mean = [0.485, 0.456, 0.406] ,std = [0.229, 0.224, 0.225])])
+        image = np.asarray(image)
+        if len(image.shape) == 2:
+          image = np.expand_dims(image, axis = -1)
+          image = np.concatenate((image, image, image), axis = -1)
+        
+        if self.split.upper() == 'TRAIN':
+          pre_transform = Transforms.Compose([
+              Transforms.ToTensor(),
+              Transforms.RandomVerticalFlip(0.5),
+              Transforms.RandomHorizontalFlip(0.5),
+              Transforms.ColorJitter(0.5, 0.5, 0.25, 0.25)
+          ])
+          image = post_transform(pre_transform(image))
+        else:
+          image = post_transform(Transforms.ToTensor()(image))
+        
+        return image, label
+
+    #train_dataset = ImageNet(root = '', split = 'train')
+    #test_dataset = ImageNet(root = '', split = 'val')
+    train_dataset = DataSet("Maysee/tiny-imagenet", split = 'train')
+    test_dataset  = DataSet("Maysee/tiny-imagenet", split = 'valid')
     train_dataloader = DataLoader(train_dataset, batch_size = 32, shuffle = True)
     test_dataloader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
     
+    DEVICE = torch.device('cuda')
     EPOCH = 1000
     EVAL_EPOCH = 50
     BEST_ACC = 0.0
     WEIGHT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'weight')
-    model = PVA().cuda()
+    # '/content/drive/MyDrive/SpeakingFridgey/pva_weight' # os.path.join(os.path.dirname(os.path.abspath(__file__)), 'weight')
+    model = PVA().to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr = 3e-4)
-    criterion = nn.CrossEntropyLoss(reduction = 'mean')
+    criterion = nn.CrossEntropyLoss(reduction = 'mean').to(DEVICE)
     metric = Accuracy()
     
     for epoch in range(EPOCH):
@@ -134,6 +170,7 @@ if __name__ == "__main__":
         for idx, batch in enumerate(train_loop):
             image, label = batch
             image, label = image.cuda(), label.cuda()
+
             predict = model(image)
             loss = criterion(input = predict, target = label)
             optimizer.zero_grad()

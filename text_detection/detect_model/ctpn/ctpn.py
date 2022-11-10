@@ -24,7 +24,11 @@ class BasicConv(nn.Module):
 class CTPN(nn.Module):
     def __init__(self, **kwargs):
         super(CTPN, self).__init__()
-        vgg = models.vgg16(weights = models.VGG16_Weights.IMAGENET1K_V1)
+        try:
+            vgg = models.vgg16(weights = models.VGG16_Weights.IMAGENET1K_V1)
+        except:
+            vgg = models.vgg16(pretrained = True)
+            
         self.base_model = nn.Sequential(*list(vgg.features)[:-1])
         self.rpn = BasicConv(512,512, kernel_size = 3, stride = 1, bn = False)
         self.brnn = nn.GRU(512, 128, bidirectional = True, batch_first = True)
@@ -59,8 +63,11 @@ class CTPN(nn.Module):
         """
         return score, vertical_pred, side_refinement
     
+    
 if __name__ == "__main__":
-    sample = torch.rand((1, 3, 128, 128))
-    model = CTPN()
-    score, vertical_coord, offset = model(sample)
-    print(score.shape, vertical_coord.shape, offset.shape)
+    device = torch.device('cuda')
+    model = CTPN().to(device)
+    sample = torch.rand((2, 3, 512, 512)).to(device)
+    score, pred, ref = model(sample)
+    print(score.shape, pred.shape, ref.shape)
+    import cv2
