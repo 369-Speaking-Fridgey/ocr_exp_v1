@@ -55,7 +55,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     trainer_entry = TrainerEntry()
     pipe = hydra.main(
-        config_path = 'configs', config_name = mode_registery[args['mode']][1]
+        config_path = 'config', config_name = mode_registery[args['mode']][1]
     )(trainer_entry.__call__)
     pipe()
         
