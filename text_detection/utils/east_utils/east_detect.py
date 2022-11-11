@@ -83,11 +83,33 @@ def get_boxes(score, geo, score_thresh, nms_thresh):
     return boxes
     
 ## (5) DETECT
+def resize_image(image):
+    H, W, C = image.shape
+    ## H,W = image.size -> PIL Image.size를 사용하면 높이, 너비만 알려줌
+    adjust_h = H if H % 32 == 0 else (H // 32) * 32
+    adjust_w = W if W % 32 == 0 else (W // 32) * 32
+    new_image = image.resize((adjust_h, adjust_w), Image.BILINEAR)
+    ratio_h = adjust_h / H ## < 1.0
+    ratio_w = adjust_w / W
+    
+    return new_image, ratio_h, ratio_w
+
+def adjust_ratio(box, ratio_h, ratio_w):
+    box[:, [1,3, 5, 7]] /= ratio_h
+    box[:, [0, 2, 4, 6]] /= ratio_w
+    
+    return np.around(box)
+    
 def detect(image_path, model, device, score_thresh = 0.9, nms_thresh = 0.2):
     image = Image.open(image_path)
     image, ratio_h, ratio_w = resize_image(image)
     with torch.no_grad():
         score, geo = model(load_image(image_path).to(device))
     
+    ## 단일 이미지를 기준으로 bounding box를 감지하는 것이기 때문에 unsqueeze를 해 주어야 한다.
+    score = score.squeeze(0).cpu().numpy()
+    geo = geo.squeeze(0).cpu().numpy()
     box = get_boxes(score, geo, score_thresh, nms_thresh)
+    
+    return adjust_ratio(box, ratio_h, ratio_w)
     
