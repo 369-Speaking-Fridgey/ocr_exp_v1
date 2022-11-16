@@ -10,6 +10,7 @@
 import math
 import json
 import random
+import torch
 import json
 import numpy as np
 from shapely.geometry import Polygon
@@ -19,6 +20,36 @@ import cv2
 import os
 from PIL import Image
 
+def move_points(vertices, index1, index2, r, coef):
+    """ Move the two points to shrink the edge
+    vertices: 8개의 좌표로 구성되어 있는 text 영역
+    index1: offset of point1
+    index2: offset of point2
+    r: (r1, r2, r3, r4) -> 이건 각각의 점에서 text box의 모든 변으로의 수직 거리를 의미한다.
+    coef: shrink ratio
+    """
+    index1 = index1 % 4
+    index2 = index2 % 4
+    
+    x1_index = index1 * 2 + 0
+    y1_index = index1 * 2 + 1
+    x2_index = index2 * 2 + 0
+    y2_index = index2 * 2 + 1
+    
+    r1, r2 = r[index1], r[index2]
+    length_x = vertices[x1_index] - vertices[x2_index]
+    length_y = vertices[y1_index] - vertices[y2_index]
+    length = cal_distance(vertices[x1_index], vertices[y1_index], vertices[x2_index], vertices[y2_index])
+    
+    if length > 1:
+        ratio = (r1 * coef) / length
+        vertices[x1_index] += ratio * (-length_x)
+        vertices[y1_index] += ratio * (-length_y)
+        ratio = (r2 * coef) / length
+        vertices[x2_index] += ratio * length_x
+        vertices[y2_index] += ratio * length_y
+    
+    return vertices
 
 def shrink_poly(vertices, coef = 0.3):
     '''
@@ -35,7 +66,17 @@ def shrink_poly(vertices, coef = 0.3):
     
     ## 세로가 더 짧은지 가로가 더 짧은지 비교를 해 주어야 한다.
     if cal_distance(x1, y1, x2, y2) + cal_distance(x3, y3, x4, y4) > cal_distance(x2, y2, x3, y3) + cal_distance(x4, y4, x3, y3):
-        
+        offset = 0
+    else:
+        offset = 1 # two longer edges are (x2y2 - x3y3) and (x4y4-x1y1)
+    
+    v = vertices.copy()
+    v = move_points(v, 0 + offset, 1 + offset, r, coef)
+    v = move_points(v, 2 + offset, 3 + offset, r, coef)
+    v = move_points(v, 1 + offset, 2 + offset, r, coef)
+    v = move_points(v, 3 + offset, 4 + offset, r, coef)
+    
+    return v
     
 def cal_distance(x1, y1, x2, y2):
     '''Calculate the Euclidian Distance (=L2 Distance)'''
@@ -43,7 +84,7 @@ def cal_distance(x1, y1, x2, y2):
     return dist
 
 def get_rotate_mat(theta):
-    ```positive theta value means rotate clockwise```
+    '''positive theta value means rotate clockwise'''
     return np.array([
         [math.cos(theta), -math.sin(theta)],
                      [math.sin(theta), math.cos(theta)]
@@ -65,7 +106,7 @@ def add_rotation(img, max_theta):
 ## 우선은 AI HUB의 데이터를 사용한다고 생각을 해도 나쁘지 않을 것이다. 적어도 text detection & recognition에 관해서는 말이다.
 ##################EAST DATASET UTILS######################################
 ##========(1) Extract Vertices==========##
-def extract_vertices(file_url, symbol = False):
+def extract_vertices_from_json(file_url, symbol = False):
     '''
     [left_x, top_y, right_x, bot_y]
     -> [left_x, top_y, right_x, top_y, right_x, bot_y, left_x, bot_y] 
@@ -73,7 +114,7 @@ def extract_vertices(file_url, symbol = False):
     '''
     
     # 만약에 symbol = False로 둔다면 
-    ```Extract the vertices from the json & txt files```
+    '''Extract the vertices from the json & txt files'''
     response = requests.get(file_url)
     ## get file url of the image
     with open(BytesIO(response.content), 'r') as f:
@@ -97,7 +138,32 @@ def extract_vertices(file_url, symbol = False):
         labels.append(1)
     return np.array(vertices), np.array(labels)
             
-
+def extract_vertices_from_txt(label_data):
+    vertices = []
+    labels = []
+    for line in label_data.split('\n'):
+        data = line.split(' ')
+        value = data[-1]
+        bbox = data[:-1]
+        if len(bbox) == 4:
+            left_x, top_y, right_x, bot_y = bbox
+            new_bbox = [
+                left_x, top_y, right_x, top_y, right_x, bot_y, left_x, bot_y
+            ]
+            vertices.append(new_bbox)
+            labels.append(1)
+        elif len(bbox) == 0 or len(bbox) < 4:
+            continue
+        else:
+            bbox = list(map(lambda x: int(x), bbox))
+            left_x, top_y, right_x, top_y, right_x, bot_y, left_x, bot_y = bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5], bbox[6], bbox[7]
+            new_bbox = [
+                left_x, top_y, right_x, top_y, right_x, bot_y, left_x, bot_y
+            ]
+            vertices.append(new_bbox)
+            labels.append(1)
+    return np.array(vertices), np.array(labels)
+    
     
 ##========(2) Adjust Height=============##
 def adjust_height(image, vertices, ratio = 0.2):
@@ -107,7 +173,7 @@ def adjust_height(image, vertices, ratio = 0.2):
     ratio_h = 1 + ratio * (np.random.rand()* 2 - 1) 
     old_h = image.height
     new_h = int(np.round(ratio_h * old_h))
-    image = image.resize((img.width, new_h), Image.BILINEAR)
+    image = image.resize((image.width, new_h), Image.BILINEAR)
     
     new_vertices = vertices.copy()
     bbox = False
@@ -117,12 +183,12 @@ def adjust_height(image, vertices, ratio = 0.2):
         if bbox:
             new_vertices[:, :] = vertices[:, :] * (new_h / old_h)
         else:
-            new_vertices[:, [1,3,5,6]] = vertices[:, [1,3,5,6]]] * (new_h / old_h)
+            new_vertices[:, [1,3,5,6]] = vertices[:, [1,3,5,6]] * (new_h / old_h)
     return image, new_vertices
     
 ##========(3) Rotate Image==============##
 def rotate_vertices(vertice, theta, anchor = None):
-    v = vertices.reshape((4, 2)).T
+    v = vertice.reshape((4, 2)).T
     if anchor is None:
         anchor = v[:, :1]
     rotate_mat = get_rotate_mat(theta)
@@ -179,7 +245,7 @@ def crop_img(image, vertices, labels, length):
         new_vertices[:, [1, 3, 5, 7]] = vertices[:, [1, 3, 5, 7]] * ratio_h
     
     ## FIND RANDOM POSITION TO START CROPPING
-    remain_h = inage.height - length
+    remain_h = image.height - length
     remain_w = image.width - length
     flag = True
     cnt = 0
@@ -188,7 +254,7 @@ def crop_img(image, vertices, labels, length):
         cnt += 1
         start_w = int(np.random.rand() * remain_w)
         start_h = int(np.random.rand() * remain_h)
-        flag = crosses_text([start_w, start_h], length, new_vertices[labels==1. :])  ## DONE
+        flag = crosses_text([start_w, start_h], length, new_vertices[labels==1, :])  ## DONE
         
     box = (start_w, start_h, start_w + length, start_h + length)
     region = image.crop(box)
@@ -281,8 +347,10 @@ def make_geo_score(img, vertices, labels, scale, length):
     scale: feature map / image
     length: image length
     """
+    from loguru import logger
+    # logger.info(f"IMAGE SPEC: {img.height}, {img.width}")
     score_map = np.zeros((int(img.height * scale), int(img.width * scale), 1), np.float32)
-    geo_map = np.zeros((int(img.height * scale), int(img.width * scale), 1), np.float32)
+    geo_map = np.zeros((int(img.height * scale), int(img.width * scale), 5), np.float32)
     ignored_map = np.zeros((int(img.height * scale), int(img.width * scale), 1), np.float32)
     
     index = np.arange(0, length, int(1/scale))
@@ -325,7 +393,7 @@ def make_geo_score(img, vertices, labels, scale, length):
         geo_map[:, :, 3] += d4[index_y, index_x] * temp_mask
         geo_map[:, :, 4] += temp_mask * theta
     
-    cv2.fillPoly(ignored_map, ignored_polus, 1)
+    cv2.fillPoly(ignored_map, ignored_polys, 1)
     cv2.fillPoly(score_map, polys, 1)
     
     return torch.Tensor(score_map).permute(2, 0, 1), torch.Tensor(geo_map).permute(2, 0, 1), torch.Tensor(ignored_map).permute(2, 0, 1)

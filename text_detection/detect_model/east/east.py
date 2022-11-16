@@ -163,10 +163,10 @@ class EAST(nn.Module):
         self.output = output(scope = output_scope, geo_type = geo_type)
     def forward(self, x):
         x = self.extractor(x)
-        for o in x:
-            logger.info(o.shape)
+        # for o in x:
+            # logger.info(o.shape)
         x = self.merge(x)
-        logger.info(x.shape)
+        # logger.info(x.shape)
         x = self.output(x)
         return x
     

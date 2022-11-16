@@ -84,7 +84,7 @@ def get_boxes(score, geo, score_thresh, nms_thresh):
     
 ## (5) DETECT
 def resize_image(image):
-    H, W, C = image.shape
+    H, W = image.size ### PIL Image로 읽었기 때문이다.
     ## H,W = image.size -> PIL Image.size를 사용하면 높이, 너비만 알려줌
     adjust_h = H if H % 32 == 0 else (H // 32) * 32
     adjust_w = W if W % 32 == 0 else (W // 32) * 32
@@ -100,8 +100,8 @@ def adjust_ratio(box, ratio_h, ratio_w):
     
     return np.around(box)
     
-def detect(image_path, model, device, score_thresh = 0.9, nms_thresh = 0.2):
-    image = Image.open(image_path)
+def detect(image, model, device, score_thresh = 0.9, nms_thresh = 0.2):
+    # image = Image.open(image_path)
     image, ratio_h, ratio_w = resize_image(image)
     with torch.no_grad():
         score, geo = model(load_image(image_path).to(device))

@@ -17,10 +17,9 @@ loss_registry = {
 def load_loss(train_cfg):
     loss_info = train_cfg['criterion']
     losses, lamdas = [], []
-    for info in loss_info:
-        loss_fn, lamda = info
-        losses.append(loss_registry[loss_fn.upper()]())
-        lamdas.append(lamda)
+    loss_fn, lamda = loss_info['loss'], loss_info['lamda']
+    losses.append(loss_registry[loss_fn.upper()]())
+    lamdas.append(lamda)
     
     return losses, lamdas
 

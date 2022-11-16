@@ -8,10 +8,10 @@ import argparse
 import importlib
 
 mode_registery = {
-    0: ('text_detection', 'detect_config', 
+    0: ('text_detection', 'detect_config.yml', 
         'text_detection.detection_dataset', 'text_detection.detection_trainer'),
-    1: ('text_recognition', 'extract_config'),
-    2: ('key_info_extraction', 'kie_config')
+    1: ('text_recognition', 'recog_config.yml'),
+    2: ('key_info_extraction', 'kie_config.yml')
 }
 
 ## loss function도 여러개를 다른 lambda ratio로 사용하게 될 수 있으니 둘다 list의 형태로 받아야 한다
@@ -32,14 +32,18 @@ class TrainerEntry():
         )
         
         ## (2) LOAD THE DATASET & DATALOADER
-        # dataset = importlib.import_module(mode_registery[model_cfg['mode']][2])
-        train_dataset = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'train')
+        dataset = importlib.import_module(mode_registery[model_cfg['mode']][2])
+        train_dataset_base = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'train')
+        train_dataset = train_dataset_base.get()
         train_dataloader = DataLoader(train_dataset, batch_size = data_cfg['batch_size'], shuffle = True)
         
-        eval_dataset = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'eval')
+        eval_dataset_base = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'eval')
+        eval_dataset = eval_dataset_base.get()
         eval_dataloader = DataLoader(eval_dataset, batch_size = 1, shuffle = False)
         
-        
+        test_dataset_base = dataset.DATASET(model_cfg['model_name'], data_cfg, mode = 'test')
+        test_dataset = test_dataset_base.get()
+        test_dataloader = DataLoader(test_dataset, batch_size = 1, shuffle = False)
         ret = trainer.run(
             train_dataloader, eval_dataloader
         )

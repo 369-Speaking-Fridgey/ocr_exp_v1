@@ -46,10 +46,13 @@ class BaseTrainer:
             user_name = self.mlops_cfg['user_name'],
             tracking_uri = self.mlops_cfg['tracking_uri']
         ) ## setup the mlflow 
-        mlflow.log_params({'train_cfg': self.train_cfg,
-                           'model_cfg': self.model_cfg,
-                           'data_cfg': self.data_cfg})
-        # mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
+        mlflow.log_params(self.train_cfg)
+        mlflow.log_params(self.model_cfg)
+        mlflow.log_params(self.data_cfg)
+        #mlflow.log_params({'train_cfg': self.train_cfg,
+        #                   'model_cfg': self.model_cfg,
+        #                   'data_cfg': self.data_cfg})
+        mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
 
     
     def build(self):

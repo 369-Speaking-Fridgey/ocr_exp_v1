@@ -10,7 +10,7 @@ def geo_loss(gt_geo, pred_geo):
     d1_gt, d2_gt, d3_gt, d4_gt, angle_gt = torch.split(gt_geo, 1, 1)
     d1_pred, d2_pred, d3_pred, d4_pred, angle_pred = torch.split(pred_geo, 1, 1)
     area_gt = (d1_gt + d3_gt) * (d2_gt + d4_gt) ## (세로 x 가로)
-    area_pred = (d1_pred + d3_pred) + (d2_pred + d4_pred)
+    area_pred = (d1_pred + d3_pred) * (d2_pred + d4_pred) ## geomeetry map을 곱해 주어야함 (왜냐면 예측한 영역의 넓이의 일치도를 본다고 생각하면 되기 때문이다.)
     w_union = torch.min(d2_gt, d2_pred) + torch.min(d4_gt, d4_pred) 
     h_union = torch.min(d1_gt, d1_pred) + torch.min(d3_gt, d3_pred)
     area_intersect = w_union * h_union
@@ -36,6 +36,6 @@ class EASTLoss(nn.Module):
         iou_loss = torch.sum(iou_loss_map * gt_score) / torch.sum(gt_score)
         
         ## The overal geometry loss is the weighted sum of the AABB loss and angle loss
-        geo_loss = self.weight_angle * angle_loss + iou_loss
+        geometry_loss = self.weight_angle * angle_loss + iou_loss
         
-        return geo_loss + classify_loss
+        return geometry_loss + classify_loss
