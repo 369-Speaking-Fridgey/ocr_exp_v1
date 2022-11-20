@@ -65,8 +65,9 @@ class Trainer(BaseTrainer):
             #org.update(new)
             #self.model.load_state_dict(org)
         """
-        
-#        self.model.extractor.eval()
+        if self.model_cfg['model_name'].upper() == 'EAST':
+            self.model.extractor.eval()
+            
         self.criterion, self.lamda = DetectLoss.load_loss(self.train_cfg) ## 모델별로 지정된 손실 함수를 불로오기 위해서 사용
         
         self.optimizer = optimizer_registry[self.train_cfg['optimizer'].upper()](
@@ -90,6 +91,7 @@ class Trainer(BaseTrainer):
                 self.save(first = True)
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
+            loss = 0.0
             train_loop = tqdm(self.train_dataloader)
             for idx, batch in enumerate(train_loop):
                 
@@ -104,7 +106,7 @@ class Trainer(BaseTrainer):
                     img, cls, regr = batch
                     img, cls, regr = img.cuda(), cls.cuda(), regr.cuda()
                     pred_cls, pred_regr = self.model(img)
-                    loss = self.criterion[0](pred_cls, pred_regr, cls, regr)
+                    loss, regr_loss, cls_loss  = self.criterion[0](pred_cls, pred_regr, cls, regr)
                     
                 # img = img.detach().cpu().numpy()
                 # print(img.shape)
@@ -120,13 +122,20 @@ class Trainer(BaseTrainer):
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-                
-                train_loop.set_postfix({
-                    "Loss": loss.item(),
-                    "Epoch": epoch,
-                    "SCORE L1 Loss": F.l1_loss(input = gt_score, target = pred_score).item(),
-                    "GEO L1 Loss": F.l1_loss(input = gt_geo, target = pred_geo).item()
-                })
+                if self.model_cfg['model_name'].upper() == 'CTPN':
+                    train_loop.set_postfix({
+                        "Loss": loss.item(),
+                        "Epoch": epoch,
+                        "CLS LOSS": cls_loss.item(),
+                        "REGR LOSS": regr_loss.item()
+                    })
+                else:
+                    train_loop.set_postfix({
+                        "Loss": loss.item(),
+                        "Epoch": epoch,
+                        "SCORE L1 Loss": F.l1_loss(input = gt_score, target = pred_score).item(),
+                        "GEO L1 Loss": F.l1_loss(input = gt_geo, target = pred_geo).item()
+                    })
                 
                 
             self.losses[epoch] = epoch_loss

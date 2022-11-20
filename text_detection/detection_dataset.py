@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 from PIL import Image
 from loguru import logger
+import random
 import torchvision
 from utils.ctpn_utils import ctpn_data_utils as ctpn_utils ## 아마도 CTPN 모덿은 사용하지 않을 확률이 높을 것
 from utils.east_utils import east_utils as east_utils
@@ -39,10 +40,20 @@ class BASEDataset(Dataset):
         ## 데이터의 형태가 다 동일할수는 없지만 기본적으로 원하는 형태로 어떤 데이터던 바꿔줄 수 있어야 한다.
         # self.img_files = [os.path.join(self.data_cfg['img_path'], img_file) for img_file in sorted(os.listdir(self.data_cfg['img_path']))]
         # self.label_files = [os.path.join(self.data_cfg['label_path'], label_file) for label_file in sorted(os.listdir(self.data_cfg['label_path']))]
-        self.img_zip_path = data_cfg['img_path']
+        img_zip_path = data_cfg['img_path'] ## list type
+        img_zip_path = list(map(lambda x: os.path.join('/home/ubuntu/user/jihye.lee/data/detection_aihub', x), img_zip_path))
+        self.img_zip_path = {
+            key: value for (key, value) in zip([int(i) for i in range(len(img_zip_path))], img_zip_path)
+        }
         self.label_zip_path = data_cfg['label_path']
-        self.img_archive = zipfile.ZipFile(self.img_zip_path, 'r')
-        self.img_files = sorted(self.img_archive.namelist())
+        self.img_archive = {}
+        for key, value in self.img_zip_path.items():
+            self.img_archive[key] = zipfile.ZipFile(value, 'r')
+        # self.img_archive = zipfile.ZipFile(self.img_zip_path, 'r')
+        self.img_files = {}
+        for key, value in self.img_archive.items():
+            self.img_files[key] = value.namelist()
+        # self.img_files = sorted(self.img_archive.namelist())
         self.label_archive = zipfile.ZipFile(self.label_zip_path, 'r')
         self.label_files = sorted(self.label_archive.namelist())
     
@@ -60,25 +71,32 @@ class EASTDataset(BASEDataset):
         
     def __len__(self):
         if self.mode.upper() == 'TRAIN':
-            return len(self.img_files)
+            return 1000
         elif self.mode.upper() == 'TEST':
             return 10
         else:
-            return int(len(self.img_files) * 0.05)
+            return 100
     
     def __getitem__(self, idx):
         # label_data = self.label_archive.read(self.label_files[idx]).decode('utf-8')
         
         # img = Image.open(self.img_files[idx])
-        img_data = self.img_archive.read(self.img_files[idx])
-        img_io = io.BytesIO(img_data)
-        # img = Image.open(img_io).convert('L')
-        img = Image.open(img_io)
+        sucess = False
+        while sucess == False:
+            folder_no = random.randint(0, 12)
+            file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            try:
+                img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
+                img_io = io.BytesIO(img_data)
+                img = Image.open(img_io)
+                sucess = True
+            except:
+                continue
         # img = np.expand_dims(img, axis = -1)
         # img = np.concatenate((img, img, img),axis = -1).astype(np.uint8)
         # img = Image.fromarray(img)
         
-        text_file_name = self.img_files[idx].replace('image', 'box').replace('jpg', 'txt')
+        text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8')
         
         vertices, labels = geo_map_utils.extract_vertices_from_txt(label_data) ## json 형태로 저장되어있는 label을 모두 txt 파일로 바꾸어야 한다.
@@ -135,11 +153,11 @@ class CTPNDataset(BASEDataset):
         
     def __len__(self):
         if self.mode.upper() == 'TRAIN':
-            return int(len(self.img_files) * 0.8)
+            return 1000#  int(len(self.img_files) * 0.8)
         elif self.mode.upper() == 'TEST':
             return 10
         else:
-            return int(len(self.img_files) * 0.2)
+            return 100
 
     def get_gtbox(self, txt_file, rescale_factor = 1.0):
         #with open(txt_file, 'r') as f:
@@ -171,9 +189,17 @@ class CTPNDataset(BASEDataset):
         return np.array(gt_boxes), np.array(full_boxes)
             
     def __getitem__(self, idx):
-        img_data = self.img_archive.read(self.img_files[idx])
-        img_io = io.BytesIO(img_data)
-        img = Image.open(img_io)
+        sucess = False
+        while sucess == False:
+            folder_no = random.randint(0, 12)
+            file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            try:
+                img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
+                img_io = io.BytesIO(img_data)
+                img = Image.open(img_io)
+                sucess = True
+            except:
+                continue
         # img = np.expand_dims(img, axis = -1)
         # img = np.concatenate((img, img, img),axis = -1).astype(np.uint8)
        #  img = Image.fromarray(img) ## read the image in a PIL Image form
@@ -186,7 +212,7 @@ class CTPNDataset(BASEDataset):
             W = int(W / rescale_factor)
             img = img.resize((H, W), Image.BILINEAR)
             
-        text_file_name = self.img_files[idx].replace('image', 'box').replace('jpg', 'txt')
+        text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
         
         vertices, full_boxes = self.get_gtbox(label_data)

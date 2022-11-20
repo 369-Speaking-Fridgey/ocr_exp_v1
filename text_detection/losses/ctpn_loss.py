@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from loguru import logger
 from utils.ctpn_utils.ctpn_data_utils import OHEM, RPN_TOTAL_NUM
 """ RPN_REGR_Loss
 - Smooth L1 Loss
@@ -11,6 +12,7 @@ class RPN_REGR_Loss(nn.Module):
         self.sigma = sigma
     
     def forward(self, pred_regr, gt_regr):
+        # gt_regr = gt_regr.detact().cpu().numpy()
         try:
             cls = gt_regr[0, :, 0]
             regression = gt_regr[0, :, 1:3]
@@ -19,10 +21,11 @@ class RPN_REGR_Loss(nn.Module):
             regr_pred = pred_regr[0][regr_keep]
             diff = torch.abs(regr_true - regr_pred)
             less_one = (diff < 1.0/self.sigma).float()
-            loss = less_one * 0.5 * diff ** 2 * self.sigam + torch.abs(1 - less_one) * (diff - 0.5/self.sigma)
+            loss = less_one * 0.5 * diff ** 2 * self.sigma + torch.abs(1 - less_one) * (diff - 0.5/self.sigma)
             loss = torch.sum(loss, 1)
             loss = torch.mean(loss) if loss.numel() > 0 else torch.tensor(0.0)
         except:
+            logger.info("ERROR IN REGRESSION LOSS")
             loss = torch.tensor(0.0)
         return loss
 
@@ -46,7 +49,7 @@ class RPN_CLS_Loss(nn.Module):
                 num_pos = len(loss_pos)
                 
             cls_neg = (cls_gt == 0).nonzero()[:, 0]
-            gt_neg = cls_gt[cls_neg]
+            gt_neg = cls_gt[cls_neg].long()
             cls_pred_neg = pred_cls[0][cls_neg]
             
             loss_neg = self.L_cls(cls_pred_neg.view(-1, 2), gt_neg.view(-1))
@@ -76,6 +79,6 @@ class CTPNLoss(nn.Module):
         cls_loss = self.cls(pred_cls, gt_cls)
         
         loss = regr_loss + cls_loss
-        return loss
+        return loss, regr_loss, cls_loss
         
         

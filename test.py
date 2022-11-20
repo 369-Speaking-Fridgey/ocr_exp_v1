@@ -1,14 +1,17 @@
-ZIP = '/home/ubuntu/user/jihye.lee/data/detection_aihub/box_data.zip'
+FOLDER = '/home/ubuntu/user/jihye.lee/data/detection_aihub'
 import zipfile
-import io
-archive = zipfile.ZipFile(ZIP, 'r')
-img = 'image_data/00810011001.jpg'
-file_name = img.replace('image', 'box').replace('jpg', 'txt')
-files = archive.namelist()
-# print(files[0])
-data = archive.read(file_name)
-data = data.decode('utf-8')
-# print(data.decode('utf8'))
-for line in data.split('\n'):
-    print(line)
-    break
+import io, os
+from loguru import logger
+
+FILES = os.listdir(FOLDER)
+for fname in FILES:
+    if fname != 'box_data.zip':
+        image_zip = os.path.join(FOLDER, fname)
+        image_archive = zipfile.ZipFile(image_zip, 'r')
+        image_files = image_archive.namelist()
+        logger.info(f"FILE NO = {len(image_files)}")
+        for f in image_files:
+            try:
+                img = image_archive.read(f)
+            except:
+                logger.info(f"UNABLE TO READ {f}")
