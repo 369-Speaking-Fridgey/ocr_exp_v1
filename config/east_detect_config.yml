@@ -1,10 +1,10 @@
 model_configuration:
   mode: 0
   model_name: !!str east
-  pretrained_model: !!str ''
+  pretrained_model: !!str '/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/east_vgg16.pth'
   params:
     ch_in: !!int 3
-    branch_name: !!str "vgg19_bn"
+    branch_name: !!str "vgg16_bn"
     geo_type: !!str "rbox"
     output_scope: !!int 1024
     pretrained_bbone: !!bool True
@@ -17,15 +17,16 @@ data_configuration:
   eval_data_path: !!str ""
   batch_size: !!int 4
   scale: !!float 0.25
-  crop_length: !!int 1024
+  crop_length: !!int 800
   # eval_crop_length: !!int 512
   mean: !!float 0.5
   std: !!float 0.5
   
 
 train_configuration:
-  epoch: !!int 20
-  eval_epoch: !!int 5
+  epoch: !!int 30
+  eval_epoch: !!int 10
+  eval_weight: !!str "/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results"
   learning_rate: !!float 2e-4
   optimizer: !!str "adam"
   weight_decay: !!float 1e-5
@@ -42,5 +43,5 @@ eval_configuration:
 mlops_configuration:
   tracking_uri: "http://127.0.0.1:5000"
   experiment_name: "Speaking Fridgey: Text Detection"
-  run_name: "text detection test"
+  run_name: "text detection test [EAST]"
   user_name: "jihye.lee"

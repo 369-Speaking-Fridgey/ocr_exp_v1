@@ -5,7 +5,7 @@
 *.ckpt
 *lightning_logs
 *raw
-
+*.zip
 *mlflow_test
 __pycache__
 /home/ubuntu/user/jihye.lee/ocr_exp_v1/outputs/*

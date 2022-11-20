@@ -16,17 +16,15 @@ def load_model(model_name, model_cfg):
     if model_cfg['pretrained_model'] != '':
         temp_weight = model.state_dict()
         load_weight = torch.load(model_cfg['pretrained_model'])
-        load_weight = [{key: value} for (key, value) in load_weight.values() if key in temp_weight and 
-                            value.size == temp_weight[key].size]
-        model.load_state_dict(load_weight)
+        if len(list(load_weight.keys())) == 2:
+            load_weight = load_weight['model_state_dict']
+        
+        load_weight = {key: value for (key, value) in load_weight.items() if key in temp_weight and 
+                            value.shape == temp_weight[key].shape}
+        temp_weight.update(load_weight)
+        for key, value in load_weight.items():
+            logger.info(key)
+        model.load_state_dict(temp_weight)
     
     return model
 
-
-if __name__ == "__main__":
-    model = load_model('east', model_cfg = {
-        'params': {'branch_name': 'vgg19_bn','geo_type': 'rbox', 'output_scope' : 512, 
-                    'pretrained_bbone': True, 'freeze_bbone': True},
-        'pretrained_model' : ''
-    })
-    logger.info(model)

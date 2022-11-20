@@ -52,7 +52,7 @@ class BaseTrainer:
         #mlflow.log_params({'train_cfg': self.train_cfg,
         #                   'model_cfg': self.model_cfg,
         #                   'data_cfg': self.data_cfg})
-        mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
+        # mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path="codes")
 
     
     def build(self):

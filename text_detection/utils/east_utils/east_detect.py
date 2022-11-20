@@ -1,11 +1,13 @@
 import torch
 from torchvision import transforms
 from PIL import Image
+import cv2
 import os
 from utils.east_utils.geo_map_utils import get_rotate_mat
 import numpy as np
 import lanms
-
+from loguru import logger
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 ## (1) LOAD THE IMAGE (PIL -> TENSOR)
 def load_image(image_path):
@@ -77,7 +79,7 @@ def get_boxes(score, geo, score_thresh, nms_thresh):
     
     boxes = np.zeros((restored_poly.shape[0], 9), dtype = np.float32)
     boxes[:, :8] = restored_poly ## 앞의 8개는 (x1, y1, x2, y2, x3, y3, x4, y4)의 정보를 포함한다.
-    boxes[:, 8] = score[xy_text[:, 0], xy_text[:, 1]]
+    boxes[:, 8] = score[xy_text[index, 0], xy_text[index, 1]]
     
     boxes = lanms.merge_quadrangle_n9(boxes.astype('float32'), nms_thresh)
     return boxes
@@ -95,11 +97,20 @@ def resize_image(image):
     return new_image, ratio_h, ratio_w
 
 def adjust_ratio(box, ratio_h, ratio_w):
+    if box is None or box.size == 0:
+        return None
     box[:, [1,3, 5, 7]] /= ratio_h
     box[:, [0, 2, 4, 6]] /= ratio_w
     
     return np.around(box)
-    
+
+def save_img(img):
+    img = img.detach().cpu().numpy()
+    img = img[0,:, :, :].transpose(1,2, 0)*0.5 + 0.5
+    img = img * 255
+    img = img.astype(np.uint8)
+    cv2.imwrite('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/test.png', np.mean(img, axis = 2))
+                
 def detect(image, model, device, score_thresh = 0.9, nms_thresh = 0.2):
     # image = Image.open(image_path)
     image, ratio_h, ratio_w = resize_image(image)
@@ -111,5 +122,69 @@ def detect(image, model, device, score_thresh = 0.9, nms_thresh = 0.2):
     geo = geo.squeeze(0).cpu().numpy()
     box = get_boxes(score, geo, score_thresh, nms_thresh)
     
-    return adjust_ratio(box, ratio_h, ratio_w)
+    return adjust_ratio(box, ratio_h, ratio_w) ## (x1, y1, x2, y2, x3, y3, x4, y4)
     
+
+def detect_while_training(batch, model, score_thresh = 0.9, nms_thresh = 0.2):
+    ## image는 GPU device위에 올라가 있을 것이다.
+    img, vertices, ratio = batch
+    save_img(img)
+    img, vertices = img.cuda(), vertices.cuda()
+    with torch.no_grad():
+        score, geo = model(img)
+        
+    score = score.squeeze(0).cpu().numpy()
+    geo = geo.squeeze(0).cpu().numpy()
+    
+    box = get_boxes(score, geo, score_thresh, nms_thresh)
+    box = adjust_ratio(box, ratio['ratio_h'], ratio['ratio_w'])
+    if box is None:
+        return {
+            "map" : torch.tensor(0.0),
+            "map_50": torch.tensor(0.0),
+            "map_75": torch.tensor(0.0)
+        }
+    pred_box, gt_box = [], []
+    pred_score = []
+    cnt = 0
+    for b in box:
+        x1, y1, x2, y2, x3, y3, x4, y4 = b[:8]
+        min_x = min(x1, x2, x3, x4);max_x = max(x1, x2, x3, x4);
+        min_y = min(y1, y2, y3, y4);max_y = max(y1, y2, y3, y4);
+        pred_box.append([min_x, min_y, max_x, max_y])
+        pred_score.append(b[8])
+        cnt +=1
+    
+    vertices = vertices.detach().cpu().numpy()
+    for v in vertices[0]:
+        x1, y1, x2, y2, x3, y3, x4, y4 = v[:8]
+        gt_box.append([x1, x2, y1, y3])
+        
+    
+    mean_ap = MeanAveragePrecision(
+        box_format = 'xyxy',
+        iou_type = 'bbox',
+    )
+    
+    # logger.info(f"PRED NUM:{len(pred_box)} GT NUM:{len(gt_box)} PRED SHAPE : {torch.tensor(pred_box).shape}")
+    
+    preds = [
+        dict(
+        boxes = torch.tensor(pred_box),
+        scores = torch.tensor(pred_score),
+        labels = torch.tensor([0 for _ in range(cnt)])
+    )]
+    
+    target = [
+        dict(
+            boxes = torch.tensor(gt_box),
+            labels =  torch.tensor([0 for _ in range(len(vertices[0]))])
+        )
+    ]
+    mean_ap.update(preds, target)
+    result = mean_ap.compute()
+    return {
+        "map": result['map'],
+        "map_50": result['map_50'],
+        "map_75": result['map_75']
+    }

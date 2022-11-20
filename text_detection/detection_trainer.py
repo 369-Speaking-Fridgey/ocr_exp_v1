@@ -14,6 +14,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.base_trainer import BaseTrainer
 from loguru import logger
 from torchmetrics.functional import precision_recall
+from torchmetrics import AveragePrecision
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchmetrics.functional import f1_score as F1
 from utils.east_utils import east_detect
 from utils.ctpn_utils import ctpn_detect
@@ -37,6 +39,7 @@ now = datetime.datetime.now()
 TODAY = str(now.strftime('%Y-%m-%d %H:%M:%S'))
 class Trainer(BaseTrainer):
     def build(self):
+        self.IMPROVED = False
         self.experiment_number = TODAY
         self.current_metric = {}
         logger.info(
@@ -45,18 +48,25 @@ class Trainer(BaseTrainer):
         self.eval_epoch = self.train_cfg['eval_epoch']
         self.total_epochs = self.train_cfg['epoch'] + self.train_cfg['eval_epoch']
         ## build the model, optimizer, schduler, loss functions, etc ..
-        mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path = "code")
+        # mlflow.log_artifacts(os.path.join(ARTIFACT_DIR, 'text_detection'), artifact_path = "code")
         self.model = DetectModel.load_model(self.model_cfg['model_name'], self.model_cfg).cuda()
         
         ## (1) LOAD THE PRETRAINED MODEL WEIGHTS
+        ## --> CHANGED TO BE DONE IN THE LOAD_MODEL FILE
+        """
         if self.model_cfg['pretrained_model'] != '':
             pretrained = torch.load(self.model_cfg['pretrained_model'])
-            org = self.model.state_dict()
-            new = {key:value for key, value in pretrained.items() if key in org and \
-                            value.shape == pretrianed[key].shape}
-            org.update(new)
-            self.model.load_state_dict(org)
-            
+            if 'model_state_dict' in pretrained:
+                pretrained = pretrained['model_state_dict']
+            self.model.load_state_dict(pretrained)
+            # org = self.model.state_dict()
+            #new = {key:value for key, value in pretrained.items() if key in org and \
+                            #value.shape == pretrained[key].shape}
+            #org.update(new)
+            #self.model.load_state_dict(org)
+        """
+        
+#        self.model.extractor.eval()
         self.criterion, self.lamda = DetectLoss.load_loss(self.train_cfg) ## 모델별로 지정된 손실 함수를 불로오기 위해서 사용
         
         self.optimizer = optimizer_registry[self.train_cfg['optimizer'].upper()](
@@ -75,6 +85,10 @@ class Trainer(BaseTrainer):
         self.losses = {}
         self.model.train()
         for epoch in range(self.total_epochs):
+            if epoch == 0:
+                # self.validate()
+                self.save(first = True)
+                logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
             train_loop = tqdm(self.train_dataloader)
             for idx, batch in enumerate(train_loop):
@@ -87,14 +101,18 @@ class Trainer(BaseTrainer):
                     ## (B, 1, W, H) (B, 5, W, H)
                     loss = self.criterion[0](gt_score, pred_score, gt_geo, pred_geo, gt_ignore)
                 elif self.model_cfg['model_name'].upper() == 'CTPN':
-                    pass
-                img = img.detach().cpu().numpy()
+                    img, cls, regr = batch
+                    img, cls, regr = img.cuda(), cls.cuda(), regr.cuda()
+                    pred_cls, pred_regr = self.model(img)
+                    loss = self.criterion[0](pred_cls, pred_regr, cls, regr)
+                    
+                # img = img.detach().cpu().numpy()
                 # print(img.shape)
-                for b in range(img.shape[0]):
-                    save_img = (((img[b,:,:,:].transpose(1, 2, 0) * 0.5) + 0.5) * 255).astype(np.uint8)
-                    save_img = np.mean(save_img, axis = 2) 
-                    cv2.imwrite(os.path.join('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results', f"{b}.png"),save_img)
-                    break
+                # for b in range(img.shape[0]):
+                    #save_img = (((img[b,:,:,:].transpose(1, 2, 0) * 0.5) + 0.5) * 255).astype(np.uint8)
+                    # save_img = np.mean(save_img, axis = 2) 
+                    # cv2.imwrite(os.path.join('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results', f"{b}.png"),save_img)
+                    # break
                 epoch_loss += loss.item()
                 if loss.item() == 0:
                     continue
@@ -124,57 +142,53 @@ class Trainer(BaseTrainer):
     def start_first_epoch(self, current_epoch):
         pass
     
-    def save(self,  last = False):
+    def save(self,  last = False, first = False):
         '''
         Function for saving the model weights if best model or if it is the last epoch
         '''
-        os.makedirs(os.path.join(self.eval_cfg['weight'], self.experiment_number), exist_ok = True)
-        if last:
-            new_path = os.path.join(self.eval_cfg['weight'], self.experiment_number, 'last.pt')
+        os.makedirs(os.path.join(self.train_cfg['eval_weight'], self.experiment_number), exist_ok = True)
+        if first:
+            new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, 'first.pt')
+            torch.save(self.model.state_dict(), new_path)
+        elif last:
+            new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, 'last.pt')
             torch.save(self.model.state_dict(), new_path)
         else:
-            new_path = os.path.join(self.eval_cfg['weight'], self.experiment_number, 'best.pt')
-            torch.save(self.model.state_dict(), new_path)
-            client = mlflow.tracking.MlflowClient()
-            client.log_artifact()
+            if self.IMPROVED == True:
+                new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, 'best.pt')
+                torch.save(self.model.state_dict(), new_path)
+                client = mlflow.tracking.MlflowClient()
+                client.log_artifact()
 
     
 
-    def evaluate(self, result_path = './samples'):
-        ## 실제 bounding box를 detect한 다음에 
-        os.makedirs('./samples', exist_ok = True)
-        
     def validate(self, root_path= './results'):
         ## evaluate 단계에서는 전체 이미지를 crop이나 height adjust없이 넣어준다.
+        def compare(self, new_dict, prev_dict):
+            new = max(list(new_dict.values()))
+            prev = max(list(prev_dict.values()))
+            if new > prev:
+                self.IMPROVED = True
+            else:
+                self.IMPROVED = False
         self.model.eval()
         idxs = random.sample(range(1, len(self.eval_dataloader)), 5)
         with torch.no_grad():
             loop = tqdm(self.eval_dataloader)
-            pr_score, pr_geo, f1_score, f1_geo = 0.0, 0.0, 0.0, 0.0
             for idx, batch in enumerate(loop):
                 if self.model_cfg['model_name'].upper() == 'EAST':
-                    img, gt_score, gt_geo, gt_ignore = batch
-                    #img, vertices = batch
-                    #img, vertices = img.cuda(), vertices.cuda()
-                    img, gt_score, gt_geo, gt_ignore = img.cuda(), gt_score.cuda(), gt_geo.cuda(), gt_ignore.cuda()
-                    pred_score, pred_geo = self.model(img)
-                    if idx in idxs:
-                        east_detect.detect_sample(pred_score, pred_geo, img)
-                
-                    pr_score += precision_recall(preds = pred_score, target = gt_score, average = 'micro')
-                    pr_geo += precision_recall(preds = pred_geo, target = gt_geo, average = 'micro')
-                    f1_score += F1(preds = pred_score, target = gt_score, average = 'micro')
-                    f1_geo += F1(preds =  pred_geo, target = gt_geo, average = 'micro')
-                
-                    self.current_metric_dict = {
-                        "Score Precision Recall": pr_score / len(loop),
-                        "Geo Precision Recall": pr_geo / len(loop),
-                        "Score F1": f1_score / len(loop),
-                        "Geo F1": f1_geo / len(loop)
-                        }   
+                    pred_score = east_detect.detect_while_training(batch, self.model, score_thresh = 0.7, nms_thresh = 0.2)
+                    self.compare(pred_score, self.current_metric_dict)
+                    self.current_metric_dict = pred_score
                     loop.set_postfix(self.current_metric_dict)
-                
+                    
+                    
                 elif self.model_cfg['model_name'].upper() == 'CTPN':
-                    pass
+                    pred_score = ctpn_detect.detect_while_training(batch, self.model)
+                    self.compare(pred_score, self.current_metric_dict)
+                    self.current_metric_dict = pred_score
+                    loop.set_postfix(self.current_metric_dict)
+            
+
 
         

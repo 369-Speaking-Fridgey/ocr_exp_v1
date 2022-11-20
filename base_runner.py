@@ -3,12 +3,13 @@ import torch.nn as nn
 import hydra
 from omegaconf import OmegaConf, DictConfig
 import os, sys
+from loguru import logger
 from torch.utils.data import DataLoader
 import argparse
 import importlib
 
 mode_registery = {
-    0: ('text_detection', 'detect_config.yml', 
+    0: ('text_detection', 'east_detect_config.yml', 
         'text_detection.detection_dataset', 'text_detection.detection_trainer'),
     1: ('text_recognition', 'recog_config.yml'),
     2: ('key_info_extraction', 'kie_config.yml')
@@ -55,11 +56,17 @@ class TrainerEntry():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    
     parser.add_argument('--mode', type=int, default = 0, help="Which module needed for training")
+    parser.add_argument('--name', type=str, default = "ctpn", help="Which model to train")
     args = vars(parser.parse_args())
     trainer_entry = TrainerEntry()
+    config_name = mode_registery[args['mode']][1]
+    if args['name'] == 'ctpn':
+        config_name = config_name.replace('east', 'ctpn')
+    logger.info(f"CONFIG NAME: {config_name}")
     pipe = hydra.main(
-        config_path = 'config', config_name = mode_registery[args['mode']][1]
+        config_path = 'config', config_name = config_name#  mode_registery[args['mode']][1]
     )(trainer_entry.__call__)
     pipe()
         
