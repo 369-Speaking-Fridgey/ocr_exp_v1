@@ -216,7 +216,7 @@ def nms(dets, thresh):
 2. graph의 index행에서 true인 항목의 인덱스 번호를 찾아 서브그래프에 추가하고 인덱스 번호를 index에 반복한다.
 3. graph의 index행 전체가 false가 될 때까지 2단계를 반복한다.
 4, 순서 1, 2, 3을 반복하여 graph를 완주한다
-텍스트 행 list [텍스트 상자 색인]을( 를) 되돌립니다.
+텍스트 행 list [텍스트 상자 색인]을 되돌립니다.
 '''
 class Graph:
     def __init__(self, graph):
@@ -418,35 +418,35 @@ class TextProposalConnectorOriented:
             score = scores[list(tp_indices)].sum() / float(len(tp_indices))
 
             text_lines[index, 0] = x0
-            text_lines[index, 1] = min(lt_y, rt_y)  # 文本行上端 线段 的y坐标的小值
+            text_lines[index, 1] = min(lt_y, rt_y)  
             text_lines[index, 2] = x1
-            text_lines[index, 3] = max(lb_y, rb_y)  # 文本行下端 线段 的y坐标的大值
-            text_lines[index, 4] = score  # 文本行得分
-            text_lines[index, 5] = z1[0]  # 根据中心点拟合的直线的k，b
+            text_lines[index, 3] = max(lb_y, rb_y) 
+            text_lines[index, 4] = score 
+            text_lines[index, 5] = z1[0]  
             text_lines[index, 6] = z1[1]
-            height = np.mean((text_line_boxes[:, 3] - text_line_boxes[:, 1]))  # 小框平均高度
+            height = np.mean((text_line_boxes[:, 3] - text_line_boxes[:, 1]))  
             text_lines[index, 7] = height + 2.5
 
         text_recs = np.zeros((len(text_lines), 9), np.float)
         index = 0
         for line in text_lines:
-            b1 = line[6] - line[7] / 2  # 根据高度和文本行中心线，求取文本行上下两条线的b值
+            b1 = line[6] - line[7] / 2  
             b2 = line[6] + line[7] / 2
             x1 = line[0]
-            y1 = line[5] * line[0] + b1  # 左上
+            y1 = line[5] * line[0] + b1  
             x2 = line[2]
-            y2 = line[5] * line[2] + b1  # 右上
+            y2 = line[5] * line[2] + b1  
             x3 = line[0]
-            y3 = line[5] * line[0] + b2  # 左下
+            y3 = line[5] * line[0] + b2  
             x4 = line[2]
-            y4 = line[5] * line[2] + b2  # 右下
+            y4 = line[5] * line[2] + b2  
             disX = x2 - x1
             disY = y2 - y1
-            width = np.sqrt(disX * disX + disY * disY)  # 文本行宽度
+            width = np.sqrt(disX * disX + disY * disY)  
 
-            fTmp0 = y3 - y1  # 文本行高度
+            fTmp0 = y3 - y1 
             fTmp1 = fTmp0 * disY / width
-            x = np.fabs(fTmp1 * disX / width)  # 做补偿
+            x = np.fabs(fTmp1 * disX / width)  
             y = np.fabs(fTmp1 * disY / width)
             if line[5] < 0:
                 x1 -= x
