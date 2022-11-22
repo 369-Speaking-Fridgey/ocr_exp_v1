@@ -86,13 +86,15 @@ class Trainer(BaseTrainer):
         self.losses = {}
         self.model.train()
         for epoch in range(self.total_epochs):
+            self.IMPROVED = False ## 매번 새롭게 업데이트
             if epoch == 0:
-                # self.validate()
+                #self.validate()
                 self.save(first = True)
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
             loss = 0.0
             train_loop = tqdm(self.train_dataloader)
+            self.model.train()
             for idx, batch in enumerate(train_loop):
                 
                 if self.model_cfg['model_name'].upper() == 'EAST':
@@ -139,6 +141,7 @@ class Trainer(BaseTrainer):
                 
                 
             self.losses[epoch] = epoch_loss
+            self.save(last = False, first = False, epoch = epoch)
             if (epoch+1) % self.eval_epoch == 0:
                 self.validate()
                 self.save(last = False) ## 만약에 metric값, 즉 정확도가 향상이 되었다면 
@@ -151,7 +154,7 @@ class Trainer(BaseTrainer):
     def start_first_epoch(self, current_epoch):
         pass
     
-    def save(self,  last = False, first = False):
+    def save(self,  last = False, first = False, epoch = 0):
         '''
         Function for saving the model weights if best model or if it is the last epoch
         '''
@@ -168,35 +171,46 @@ class Trainer(BaseTrainer):
                 torch.save(self.model.state_dict(), new_path)
                 client = mlflow.tracking.MlflowClient()
                 client.log_artifact()
+                logger.info("SAVED BEST WEIGHT...")
+            else:
+                new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, f'EPOCH{epoch}.pt')
+                torch.save(self.model.state_dict(), new_path)
+                logger.info(f"SAVED WEIGHT OF EPOCH {epoch}....")
 
-    
+    def compare(self, new_dict, prev_dict):
+        new = max(list(new_dict.values()))
+        if prev_dict is None or prev_dict == {}:
+            prev_dict = new_dict
+            self.IMPROVED = True
+            return
+        prev = max(list(prev_dict.values()))
+        if new > prev:
+            self.IMPROVED = True
+        else:
+            self.IMPROVED = False
 
     def validate(self, root_path= './results'):
         ## evaluate 단계에서는 전체 이미지를 crop이나 height adjust없이 넣어준다.
-        def compare(self, new_dict, prev_dict):
-            new = max(list(new_dict.values()))
-            prev = max(list(prev_dict.values()))
-            if new > prev:
-                self.IMPROVED = True
-            else:
-                self.IMPROVED = False
+
         self.model.eval()
+        
         idxs = random.sample(range(1, len(self.eval_dataloader)), 5)
         with torch.no_grad():
             loop = tqdm(self.eval_dataloader)
-            for idx, batch in enumerate(loop):
-                if self.model_cfg['model_name'].upper() == 'EAST':
+            if self.model_cfg['model_name'].upper() == 'EAST':
+                for idx, batch in enumerate(loop):
                     pred_score = east_detect.detect_while_training(batch, self.model, score_thresh = 0.7, nms_thresh = 0.2)
-                    self.compare(pred_score, self.current_metric_dict)
+                    # self.compare(pred_score, self.current_metric_dict)
+                    
                     self.current_metric_dict = pred_score
                     loop.set_postfix(self.current_metric_dict)
                     
                     
-                elif self.model_cfg['model_name'].upper() == 'CTPN':
-                    pred_score = ctpn_detect.detect_while_training(batch, self.model)
-                    self.compare(pred_score, self.current_metric_dict)
-                    self.current_metric_dict = pred_score
-                    loop.set_postfix(self.current_metric_dict)
+            elif self.model_cfg['model_name'].upper() == 'CTPN':
+                pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, iou = True)
+                self.compare(pred_score, self.current_metric_dict)
+                self.current_metric_dict = pred_score
+                loop.set_postfix(self.current_metric_dict)
             
 
 

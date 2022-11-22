@@ -11,7 +11,7 @@ model_configuration:
     freeze_bbone: !!bool True
 
 data_configuration:
-  label_path: !!str "/home/ubuntu/user/jihye.lee/data/detection_aihub/box_data.zip"
+  label_path: !!str "/home/ubuntu/user/jihye.lee/data/new_box_data.zip"
   img_path: 
     - "image_data-20221112T142753Z-001.zip" 
     - "image_data-20221112T142753Z-002.zip"

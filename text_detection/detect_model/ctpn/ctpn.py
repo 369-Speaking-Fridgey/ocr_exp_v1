@@ -29,7 +29,7 @@ class CTPN(nn.Module):
         except:
             vgg = models.vgg16(pretrained = True)
             
-        self.base_model = nn.Sequential(*list(vgg.features)[:-1])
+        self.base_layers = nn.Sequential(*list(vgg.features)[:-1])
         self.rpn = BasicConv(512,512, kernel_size = 3, stride = 1, bn = False) ## Conv - ReLU
         self.brnn = nn.GRU(512, 128, bidirectional = True, batch_first = True) ## bidirectional=True로 했기 때문에 D=2라서 output shape가 2 * H_out이다.
         self.lstm_fc = BasicConv(256, 512, kernel_size = 1, stride = 1, relu = True, bn = False)
@@ -42,7 +42,7 @@ class CTPN(nn.Module):
         
     def forward(self, x):
         ## (B, C, H, W)
-        x = self.base_model(x)
+        x = self.base_layers(x)
         x = self.rpn(x) ## (B, 512, H', W') -> 이렇게 vgg16의 feature 추출 layer에서의 output을 사용한다.
 
         x1 = x.permute(0, 2, 3, 1).contiguous() ## (B, C, H, W) -> (B, H, W, C)

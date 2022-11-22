@@ -191,7 +191,7 @@ class CTPNDataset(BASEDataset):
     def __getitem__(self, idx):
         sucess = False
         while sucess == False:
-            folder_no = random.randint(0, 12)
+            folder_no = random.randint(0, len(self.img_files)-1)
             file_no = random.randint(0, len(self.img_files[folder_no])-1)
             try:
                 img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
@@ -212,8 +212,10 @@ class CTPNDataset(BASEDataset):
             W = int(W / rescale_factor)
             img = img.resize((H, W), Image.BILINEAR)
             
-        text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
+        # text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
+        text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
+
         
         vertices, full_boxes = self.get_gtbox(label_data)
         
@@ -223,7 +225,7 @@ class CTPNDataset(BASEDataset):
             new1 = W - vertices[:, 2] - 1
             new2 = W - vertices[:, 0] - 1
             vertices[:, 0] = new1
-            vertices[:, 1] = new2
+            vertices[:, 2] = new2
         
         [cls, regr] = ctpn_utils.cal_rpn((H, W), (int(H / 16), int(W / 16)), 16, vertices)
         regr = np.hstack([cls.reshape(cls.shape[0], 1), regr]) ## Bounding Box targets
@@ -245,7 +247,7 @@ class CTPNDataset(BASEDataset):
 if __name__ == "__main__":
     DATA_CFG = dict(
         label_path="/home/ubuntu/user/jihye.lee/data/detection_aihub/box_data.zip",
-        img_path= "/home/ubuntu/user/jihye.lee/data/detection_aihub/image_data-20221112T142753Z-001.zip",
+        img_path= ["image_data-20221112T142753Z-001.zip"],
         batch_size=4,
         scale= 0.25,
         crop_length= 800,

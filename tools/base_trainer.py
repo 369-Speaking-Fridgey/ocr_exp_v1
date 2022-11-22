@@ -48,7 +48,7 @@ class BaseTrainer:
         ) ## setup the mlflow 
         mlflow.log_params(self.train_cfg)
         mlflow.log_params(self.model_cfg)
-        mlflow.log_params(self.data_cfg)
+        # mlflow.log_params(self.data_cfg)
         #mlflow.log_params({'train_cfg': self.train_cfg,
         #                   'model_cfg': self.model_cfg,
         #                   'data_cfg': self.data_cfg})
