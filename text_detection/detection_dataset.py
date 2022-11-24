@@ -82,9 +82,14 @@ class EASTDataset(BASEDataset):
         
         # img = Image.open(self.img_files[idx])
         sucess = False
+        
         while sucess == False:
-            folder_no = random.randint(0, 12)
-            file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            if self.mode.upper() == 'TRAIN':
+                folder_no = random.randint(0, 12)
+                file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            else:
+                folder_no = 0
+                file_no = idx
             try:
                 img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
                 img_io = io.BytesIO(img_data)
@@ -153,12 +158,20 @@ class CTPNDataset(BASEDataset):
         
     def __len__(self):
         if self.mode.upper() == 'TRAIN':
-            return 1000#  int(len(self.img_files) * 0.8)
+            return 3000#  int(len(self.img_files) * 0.8)
         elif self.mode.upper() == 'TEST':
             return 10
         else:
             return 100
-
+    
+    
+    ########### TODO ###############################################
+    def random_crop(self, image, txt_file):
+        ## TODO ##
+        ## Make the Random Crop Function to make the training more efficient
+        ## 이때 무조건 가로 방향으로 짜를 수 있도록 한다.
+        return 
+    
     def get_gtbox(self, txt_file, rescale_factor = 1.0):
         #with open(txt_file, 'r') as f:
             #txt_data = f.readlines()
@@ -173,12 +186,13 @@ class CTPNDataset(BASEDataset):
             x1, y1, x2, y2, x3, y3, x4, y4 = int(x1), int(y1), int(x2), int(y2), int(x3), int(y3), int(x4), int(y4)
             xmin, xmax = min(x1, x2, x3, x4), max(x1, x2,x3, x4)
             ymin, ymax = min(y1, y2, y3, y4), max(y1, y2, y3, y4)
-            full_boxes.append((xmin, ymin, xmax, ymax))
+            
             if rescale_factor > 1.0:
                 xmin = int(xmin / rescale_factor)
                 xmax = int(xmax / rescale_factor)
                 ymin = int(ymin / rescale_factor)
                 ymax = int(ymax / rescale_factor)
+            full_boxes.append((xmin, ymin, xmax, ymax))
             prev = xmin
             for i in range(xmin // 16 + 1, xmax // 16 + 1):
                 next = 16 * i -0.5
@@ -191,8 +205,13 @@ class CTPNDataset(BASEDataset):
     def __getitem__(self, idx):
         sucess = False
         while sucess == False:
-            folder_no = random.randint(0, len(self.img_files)-1)
-            file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            if self.mode.upper() == 'TRAIN':
+                folder_no = random.randint(0, len(self.img_files)-1)
+                file_no = random.randint(0, len(self.img_files[folder_no])-1)
+            else:
+                folder_no = 0
+                file_no = idx
+            
             try:
                 img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
                 img_io = io.BytesIO(img_data)
@@ -203,21 +222,29 @@ class CTPNDataset(BASEDataset):
         # img = np.expand_dims(img, axis = -1)
         # img = np.concatenate((img, img, img),axis = -1).astype(np.uint8)
        #  img = Image.fromarray(img) ## read the image in a PIL Image form
-        
-        H, W = img.size
+        numpy_img = np.array(img)
+        img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
+        # W,H = img.size
+        H, W, C = img.shape
         #logger.info(f"{(H, W)}")
-        rescale_factor = min(H, W) / 1000
+        # rescale_factor = max(H, W) / 1000
+        rescale_factor = max(H, W) / 1000
+        """image rescaling을 하는데 rescale factor을 ground truth generation에서
+        보내주지 않았기 때문에 문제가 생겼었다.
+        """
         if rescale_factor > 1.0:
             H = int(H / rescale_factor)
             W = int(W / rescale_factor)
-            img = img.resize((H, W), Image.BILINEAR)
+            # img = img.resize((W,H), Image.BILINEAR)
+            img = cv2.resize(img, (W, H))
+            # img = cv2
             
         # text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
         text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
 
         
-        vertices, full_boxes = self.get_gtbox(label_data)
+        vertices, full_boxes = self.get_gtbox(label_data, rescale_factor)
         
         img = np.array(img)
         if np.random.randint(2) == 1:

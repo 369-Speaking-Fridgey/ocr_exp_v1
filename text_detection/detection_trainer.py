@@ -88,7 +88,7 @@ class Trainer(BaseTrainer):
         for epoch in range(self.total_epochs):
             self.IMPROVED = False ## 매번 새롭게 업데이트
             if epoch == 0:
-                #self.validate()
+                self.validate()
                 self.save(first = True)
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
@@ -169,8 +169,8 @@ class Trainer(BaseTrainer):
             if self.IMPROVED == True:
                 new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, 'best.pt')
                 torch.save(self.model.state_dict(), new_path)
-                client = mlflow.tracking.MlflowClient()
-                client.log_artifact()
+                # client = mlflow.tracking.MlflowClient()
+                # client.log_artifact()
                 logger.info("SAVED BEST WEIGHT...")
             else:
                 new_path = os.path.join(self.train_cfg['eval_weight'], self.experiment_number, f'EPOCH{epoch}.pt')

@@ -58,7 +58,7 @@ def detect_while_training_iou(batch, model, prob_thresh = 0.5):
         bbox = clip_bbox(bbox, [H, W])
         
         fg = np.where(pred_cls_prob[0, :, 1] > prob_thresh)[0]
-        select_anchor = anchor[fg, :]
+        select_anchor = bbox[fg, :]
         select_score = pred_cls_prob[0, fg, 1]
         select_anchor = select_anchor.astype(np.int32)
         keep_index = filter_bbox(select_anchor, 16)
@@ -78,30 +78,34 @@ def detect_while_training_iou(batch, model, prob_thresh = 0.5):
     gt_box = []
     predicted = np.zeros_like(image.detach().cpu().squeeze(0).squeeze(0).numpy())
     answer = np.zeros_like(image.detach().cpu().squeeze(0).squeeze(0).numpy())
+
     for line in text:
         score = int(line[-1])
         line = [int(j) for j in line]
         x1, y1, x2, y2, x3, y3, x4, y4 = line[:8]
         min_x, max_x = min(x1, x2, x3, x4), max(x1, x2, x3, x4)
         min_y, max_y = min(y1, y2, y3, y4), max(y1, y2, y3, y4)
-        predicted[:, min_y:max_y+1,min_x:max_x+1] = 1
+        predicted[:, min_y:max_y,min_x:max_x] = 1
     # cv2.imwrite("./predicted.png", predicted)
     
     predicted = predicted == 1
     
     for box in full_boxes.numpy()[0]:
         min_x, min_y, max_x, max_y = int(box[0]), int(box[1]), int(box[2]), int(box[3])
-        answer[:, min_y:max_y+1, min_x:max_x+1] = 1
+        answer[:,min_y:max_y, min_x:max_x] = 1
     answer = answer == 1
     #cv2.imwrite("./answer.png", answer)
-    intersection = (predicted&answer).sum((1,2))
+    intersection = (predicted&answer).sum((0,1,2))
     # print(intersection.shape)
-    union = (predicted | answer).sum((1,2))
+    union = (predicted | answer).sum((0,1,2))
     # logger.info(f"INTERSECTION: {intersection")
-    iou = (intersection + 1e-5) / (union + 1e-5)
+    if union.sum() == 0.0 or union.sum() == 0:
+        return {"iou": 0.0}
+    else:
+        iou = intersection / union
     # threshold = np.ceil(np.clip(20))
     
-    return {"iou": iou.mean()}
+        return {"iou": iou}
         
         
         
@@ -121,7 +125,7 @@ def detect_while_training_precision(batch, model, prob_thresh=0.5):
         bbox = clip_bbox(bbox, [H, W])
         
         fg = np.where(pred_cls_prob[0, :, 1] > prob_thresh)[0]
-        select_anchor = anchor[fg, :]
+        select_anchor = bbox[fg, :]
         select_score = pred_cls_prob[0, fg, 1]
         select_anchor = select_anchor.astype(np.int32)
         keep_index = filter_bbox(select_anchor, 16)

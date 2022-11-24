@@ -8,7 +8,8 @@ IOU_SELECT=0.7
 RPN_POSITIVE_NUM=150
 RPN_TOTAL_NUM=300
 IMAGE_MEAN=[123.68, 116.779, 103.939]
-OHEM=True
+# OHEM=True
+OHEM=False
 '''
 anchor generation
 문제: 먼저 base_anchor이 초기 위치 지점에 대해 생성된 anchor은 단계별로 feature map의 각 지점에 anchor을 생성한 후 anchor의 shape는 (10, H*W, 4)가 된다.

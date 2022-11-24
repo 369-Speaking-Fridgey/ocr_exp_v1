@@ -28,7 +28,7 @@ data_configuration:
     - "image_data-20221112T142753Z-013.zip"  # "/home/ubuntu/user/jihye.lee/data/detection_aihub/image_data.zip"
   train_data_path: !!str ""
   eval_data_path: !!str ""
-  batch_size: !!int 4
+  batch_size: !!int 2
   scale: !!float 0.25
   crop_length: !!int 800
   # eval_crop_length: !!int 512
@@ -38,10 +38,10 @@ data_configuration:
 
 train_configuration:
   epoch: !!int 30
-  eval_epoch: !!int 10
+  eval_epoch: !!int 2
   eval_weight: !!str "/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results"
   learning_rate: !!float 1e-3
-  optimizer: !!str "sgd"
+  optimizer: !!str "adam"
   weight_decay: !!float 1e-5
   scheduler: !!str "warm up"
   criterion: 
