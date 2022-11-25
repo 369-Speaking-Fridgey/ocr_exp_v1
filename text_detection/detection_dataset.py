@@ -170,7 +170,38 @@ class CTPNDataset(BASEDataset):
         ## TODO ##
         ## Make the Random Crop Function to make the training more efficient
         ## 이때 무조건 가로 방향으로 짜를 수 있도록 한다.
-        return 
+        txt_data = txt_file.split('\n') ## (1) 정답 bounding box의 좌표를 line 단위로 읽는다.
+        top_x, bot_x = [], []
+        H,W,C = image.shape
+        points = [1 for _ in range(H)]
+
+        for data in txt_data:
+            point_data = data.split(' ')[:8]
+            point_data = [int(p) for p in point_data]
+            X = point_data[::2]
+            # Y = point_data[1::2]
+            xmin, xmax = min(X), max(X)
+            points[xmin:xmax] = 0
+        points = np.array(points)
+        valid = sorted(np.where(points == 1)[0])
+        cut_x = valid[np.where(valid >= H//2)[0][0]]
+
+        new_txt_file = '' 
+        for data in txt_data:
+            point_data = data.split(' ')[:8]
+            point_data = [int(p) for p in point_data]
+            X = point_data[::2]
+            if min(X) >= cut_x:
+                new_txt_file += data
+        
+
+        if random.randint(2) == 1:
+            cut_image = image[cut_x:, :, :]
+        else:
+            cut_image = image[:cut_x,:,:]
+        
+
+        return cut_image, new_txt_file
     
     def get_gtbox(self, txt_file, rescale_factor = 1.0):
         #with open(txt_file, 'r') as f:
@@ -225,9 +256,15 @@ class CTPNDataset(BASEDataset):
         numpy_img = np.array(img)
         img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
         # W,H = img.size
+        text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
+        label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
+
+        img, label_data = self.random_crop(img, label_data) ## x axis에 대해서 crop을 해서 scale도 그렇고 예측해야 하는 text line의 개수를 receipt에 있는 개수와 비슷하게 맞춰주려 했다.
+
         H, W, C = img.shape
         #logger.info(f"{(H, W)}")
         # rescale_factor = max(H, W) / 1000
+        
         rescale_factor = max(H, W) / 1000
         """image rescaling을 하는데 rescale factor을 ground truth generation에서
         보내주지 않았기 때문에 문제가 생겼었다.
@@ -240,8 +277,8 @@ class CTPNDataset(BASEDataset):
             # img = cv2
             
         # text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
-        text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
-        label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
+        
+
 
         
         vertices, full_boxes = self.get_gtbox(label_data, rescale_factor)
@@ -258,7 +295,7 @@ class CTPNDataset(BASEDataset):
         regr = np.hstack([cls.reshape(cls.shape[0], 1), regr]) ## Bounding Box targets
         cls = np.expand_dims(cls, axis = 0) ## Labels
         
-        mean_img = img - ctpn_utils.IMAGE_MEAN
+        mean_img = img - ctpn_utils.IMAGE_MEAN ## 이미지의 정규화를 할 때에 
         # mean_img = torchvision.transforms.ToTensor()(mean_img)
         mean_img = mean_img.transpose([2, 0, 1])
         mean_img = torch.from_numpy(mean_img).float()
