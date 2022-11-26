@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from position import PositionEncoding
 from transformer import TransformerEncoderLayer
-from resnet import resnet45
+import resnet
 
 """ Transformer Encoder
 - ResNet-50
@@ -20,7 +20,7 @@ class ResTransformer(nn.Module):
                  dropout=0.1,
                  num_layers=5):
         super(ResTransformer, self).__init__()
-        self.resnet = resnet45()
+        self.resnet = resnet.resnet45()
 
         self.d_model = model_dim
         self.nhead = head_num

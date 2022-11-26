@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width", initial-scale="1.0">
+        <title>Text Detection & Text Recognition</title>
+    </head>
+<body>
+    <body>
+        <h1>Hello, This is the Demo App of the Text Detection & Text Recognition</h1>
+    </body>
+    <form action="http://localhost:3000/predict"
+        method="post"
+        enctype="multipart/form-data">
+        <input type="file" name="file" id="file" />
+        <input type="submit" />
+        <div id="preview"></div>
+    </form>
+    <script>
+        var upload = document.querySelector('#file');
+        var upload2 = document.querySelector('#preview')
+        var reader = new FileReader();
+        reader.onload = (function () {
+            this.image = document.createElement('img');
+            var vm = this;
+            return function (e) {
+                vm.image.src = e.target.result
+            }
+        }) ()
+
+        upload.addEventListener('change', function (e) {
+            var get_file = e.target.files;
+
+            if(get_file){
+                reader.readAsDataURL(get_file[0]);
+            }
+            image.stype.maxWidth='500px';
+            image.stype.macHeight='500px';
+            preview.appendChild(image);
+        })
+    </script>
+</body>
+</html>

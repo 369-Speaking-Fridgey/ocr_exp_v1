@@ -78,7 +78,7 @@ class CTPNLoss(nn.Module):
         regr_loss = self.regr(pred_regr, gt_regr)
         cls_loss = self.cls(pred_cls, gt_cls)
         
-        loss = regr_loss + cls_loss
+        loss = cls_loss + regr_loss * 2.0
         return loss, regr_loss, cls_loss
         
         

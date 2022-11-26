@@ -13,6 +13,7 @@
 __pycache__
 /home/ubuntu/user/jihye.lee/ocr_exp_v1/outputs/*
 /outputs
+*.jpg
 /home/ubuntu/user/jihye.lee/ocr_exp_v1/artifacts/*
 /artifacts
 /results

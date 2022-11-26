@@ -14,9 +14,9 @@ from decoder import AttentionalDecoder
 """
 class HangulNet(nn.Module):
   def __init__(self, 
-               max_seq_length=75,
-               embedding_dim=512,
-               class_n=52,
+               max_seq_length=75, ## 논문의 저자들이 지정한 가장 긴 길이의 sequence length인데, 75라는 것은 총 문자의 개수가 25개라는 것이다.
+               embedding_dim=512, ## transformer encoder에서 model output의 dimension을 나타냄
+               class_n=52, ## 한글에서의 초성-중성-종성의 개수를 나타냄
                ):
     super(HangulNet, self).__init__()
     #self.resnet = resnet45()

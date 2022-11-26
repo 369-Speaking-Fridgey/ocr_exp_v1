@@ -12,7 +12,7 @@ from utils.ctpn_utils.ctpn_data_utils import gen_anchor, transform_bbox, clip_bb
 def detect(image, model, display=True, prob_thresh=0.5):
     H, W = image.shape[:2]
 
-def detect_all(eval_dataloader, model, prob_thresh = 0.5, iou = True):
+def detect_all(eval_dataloader, model, prob_thresh = 0.3, iou = True):
     loop = tqdm(eval_dataloader)
     if iou == False:
         temp_dict = {
@@ -42,7 +42,7 @@ def detect_all(eval_dataloader, model, prob_thresh = 0.5, iou = True):
             temp_dict[key] /= len(loop)
         return temp_dict
     
-def detect_while_training_iou(batch, model, prob_thresh = 0.5):
+def detect_while_training_iou(batch, model, prob_thresh = 0.3):
     image, cls, regr, full_boxes = batch
     B, C, H, W = image.shape
     # image, cls, regr = image.cuda(), cls.cuda(), regr.cuda()
@@ -57,7 +57,7 @@ def detect_while_training_iou(batch, model, prob_thresh = 0.5):
         bbox = transform_bbox(anchor, pred_regr)
         bbox = clip_bbox(bbox, [H, W])
         
-        fg = np.where(pred_cls_prob[0, :, 1] > prob_thresh)[0]
+        fg = np.where(pred_cls_prob[0, :, 1] > prob_thresh)[0] ## score이 threshold 점수보다 높은 경우의 index
         select_anchor = bbox[fg, :]
         select_score = pred_cls_prob[0, fg, 1]
         select_anchor = select_anchor.astype(np.int32)
@@ -72,32 +72,36 @@ def detect_while_training_iou(batch, model, prob_thresh = 0.5):
         select_score = select_score[keep]
         
         textConn = TextProposalConnectorOriented()
-        text = textConn.get_text_lines(select_anchor, select_score, [H, W]) ## 마지막 text line은 점수를 의미함
+        text, new_text = textConn.get_text_lines(select_anchor, select_score, [H, W]) ## 마지막 text line은 점수를 의미함
     
     pred_box, pred_score = [], []
     gt_box = []
-    predicted = np.zeros_like(image.detach().cpu().squeeze(0).squeeze(0).numpy())
-    answer = np.zeros_like(image.detach().cpu().squeeze(0).squeeze(0).numpy())
-
+    predicted = np.zeros_like(image.detach().cpu().squeeze(0).numpy())[0,:,:]
+    answer = np.zeros_like(image.detach().cpu().squeeze(0).numpy())[0,:,:]
+    """
+    for line in new_text:
+        line = [int(j) for j in line]
+        predicted[line[1]:line[3], line[0]:line[2]] = 1
+    """
     for line in text:
         score = int(line[-1])
         line = [int(j) for j in line]
         x1, y1, x2, y2, x3, y3, x4, y4 = line[:8]
         min_x, max_x = min(x1, x2, x3, x4), max(x1, x2, x3, x4)
         min_y, max_y = min(y1, y2, y3, y4), max(y1, y2, y3, y4)
-        predicted[:, min_y:max_y,min_x:max_x] = 1
+        predicted[min_y:max_y,min_x:max_x] = 1
     # cv2.imwrite("./predicted.png", predicted)
     
     predicted = predicted == 1
     
     for box in full_boxes.numpy()[0]:
         min_x, min_y, max_x, max_y = int(box[0]), int(box[1]), int(box[2]), int(box[3])
-        answer[:,min_y:max_y, min_x:max_x] = 1
+        answer[min_y:max_y, min_x:max_x] = 1
     answer = answer == 1
     #cv2.imwrite("./answer.png", answer)
-    intersection = (predicted&answer).sum((0,1,2))
+    intersection = (predicted&answer).sum((0,1))
     # print(intersection.shape)
-    union = (predicted | answer).sum((0,1,2))
+    union = (predicted | answer).sum((0,1))
     # logger.info(f"INTERSECTION: {intersection")
     if union.sum() == 0.0 or union.sum() == 0:
         return {"iou": 0.0}

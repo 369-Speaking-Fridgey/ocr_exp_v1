@@ -176,32 +176,47 @@ class CTPNDataset(BASEDataset):
         points = [1 for _ in range(H)]
 
         for data in txt_data:
+            if data == '':
+                continue
             point_data = data.split(' ')[:8]
             point_data = [int(p) for p in point_data]
             X = point_data[::2]
             # Y = point_data[1::2]
             xmin, xmax = min(X), max(X)
-            points[xmin:xmax] = 0
+            points[xmin:xmax] = [0 for _ in range(xmax -xmin)]
         points = np.array(points)
-        valid = sorted(np.where(points == 1)[0])
-        cut_x = valid[np.where(valid >= H//2)[0][0]]
-
+        valid = np.array(sorted(np.where(points == 1)[0]))
+        cut_x = valid[np.where(valid >= W)[0][0]]
+       
         new_txt_file = '' 
-        for data in txt_data:
-            point_data = data.split(' ')[:8]
-            point_data = [int(p) for p in point_data]
-            X = point_data[::2]
-            if min(X) >= cut_x:
-                new_txt_file += data
-        
 
-        if random.randint(2) == 1:
+        if np.random.randint(2) == 1:
+            for data in txt_data:
+                if data == '':
+                    continue
+                point_data = data.split(' ')[:8]
+                point_data = [int(p) for p in point_data]
+                X = point_data[::2]
+                if min(X) >= cut_x:
+                    new_txt_file += data
+                    #print(data)
             cut_image = image[cut_x:, :, :]
         else:
+            for data in txt_data:
+                if data == '':
+                    continue
+                point_data = data.split(' ')[:8]
+                point_data = [int(p) for p in point_data]
+                X = point_data[::2]
+                if min(X) <= cut_x:
+                    new_txt_file += data
+                    #print(data)
             cut_image = image[:cut_x,:,:]
         
-
-        return cut_image, new_txt_file
+        if new_txt_file == '':
+            return image, txt_file
+        else:
+            return cut_image, new_txt_file
     
     def get_gtbox(self, txt_file, rescale_factor = 1.0):
         #with open(txt_file, 'r') as f:
@@ -247,22 +262,25 @@ class CTPNDataset(BASEDataset):
                 img_data = self.img_archive[folder_no].read(self.img_files[folder_no][file_no])
                 img_io = io.BytesIO(img_data)
                 img = Image.open(img_io)
+                img = np.array(img)
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                 sucess = True
             except:
                 continue
         # img = np.expand_dims(img, axis = -1)
         # img = np.concatenate((img, img, img),axis = -1).astype(np.uint8)
        #  img = Image.fromarray(img) ## read the image in a PIL Image form
-        numpy_img = np.array(img)
-        img = cv2.cvtColor(numpy_img, cv2.COLOR_RGB2BGR)
+        #numpy_img = np.array(img)
+        #Color(numpy_img, cv2.COLOR_RGB2BGR)
         # W,H = img.size
+        H, W = img.shape
         text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
+        
+        # img, label_data = self.random_crop(img, label_data) ## x axis에 대해서 crop을 해서 scale도 그렇고 예측해야 하는 text line의 개수를 receipt에 있는 개수와 비슷하게 맞춰주려 했다.
 
-        img, label_data = self.random_crop(img, label_data) ## x axis에 대해서 crop을 해서 scale도 그렇고 예측해야 하는 text line의 개수를 receipt에 있는 개수와 비슷하게 맞춰주려 했다.
-
-        H, W, C = img.shape
-        #logger.info(f"{(H, W)}")
+        # H, W, C = img.shape
+        # logger.info(f"{(H, W)}")
         # rescale_factor = max(H, W) / 1000
         
         rescale_factor = max(H, W) / 1000
@@ -274,38 +292,44 @@ class CTPNDataset(BASEDataset):
             W = int(W / rescale_factor)
             # img = img.resize((W,H), Image.BILINEAR)
             img = cv2.resize(img, (W, H))
-            # img = cv2
-            
+            # img = cv2.resize(img, (W, H))
         # text_file_name = self.img_files[folder_no][file_no].replace('image', 'box').replace('jpg', 'txt')
         
 
 
         
         vertices, full_boxes = self.get_gtbox(label_data, rescale_factor)
-        
         img = np.array(img)
+        """
         if np.random.randint(2) == 1:
             img = img[:, ::-1, :]
             new1 = W - vertices[:, 2] - 1
             new2 = W - vertices[:, 0] - 1
             vertices[:, 0] = new1
             vertices[:, 2] = new2
-        
+        """
         [cls, regr] = ctpn_utils.cal_rpn((H, W), (int(H / 16), int(W / 16)), 16, vertices)
         regr = np.hstack([cls.reshape(cls.shape[0], 1), regr]) ## Bounding Box targets
         cls = np.expand_dims(cls, axis = 0) ## Labels
         
+        aug = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean = ctpn_utils.IMAGE_MEAN, std = ctpn_utils.IMAGE_STD)
+        ])
+        img = aug(img)
+        """
         mean_img = img - ctpn_utils.IMAGE_MEAN ## 이미지의 정규화를 할 때에 
         # mean_img = torchvision.transforms.ToTensor()(mean_img)
         mean_img = mean_img.transpose([2, 0, 1])
         mean_img = torch.from_numpy(mean_img).float()
+        """
         cls = torch.from_numpy(cls).float()
         regr = torch.from_numpy(regr).float()
         
         if self.mode.upper() == 'TRAIN':
-            return mean_img, cls, regr
+            return img, cls, regr
         else:
-            return mean_img, cls, regr, torch.from_numpy(full_boxes).float()
+            return img, cls, regr, torch.from_numpy(full_boxes).float()
         
         
 if __name__ == "__main__":

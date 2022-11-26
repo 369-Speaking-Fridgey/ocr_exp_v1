@@ -28,8 +28,15 @@ class CTPN(nn.Module):
             vgg = models.vgg16(weights = models.VGG16_Weights.IMAGENET1K_V1)
         except:
             vgg = models.vgg16(pretrained = True)
+        vgg.features[0].weight.requires_grad = False
+        vgg.features[0].bias.requires_grad = False
+        vgg.features[2].weight.requires_grad = False
+        vgg.features[2].bias.requires_grad = False
             
         self.base_layers = nn.Sequential(*list(vgg.features)[:-1])
+        
+        
+            
         self.rpn = BasicConv(512,512, kernel_size = 3, stride = 1, bn = False) ## Conv - ReLU
         self.brnn = nn.GRU(512, 128, bidirectional = True, batch_first = True) ## bidirectional=True로 했기 때문에 D=2라서 output shape가 2 * H_out이다.
         self.lstm_fc = BasicConv(256, 512, kernel_size = 1, stride = 1, relu = True, bn = False)

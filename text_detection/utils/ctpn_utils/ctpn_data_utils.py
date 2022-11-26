@@ -1,15 +1,21 @@
 import numpy as np
 import cv2
 
+#IOU_NEGATIVE=0.3
 IOU_NEGATIVE=0.3
-IOU_POSITIVE=0.7
+IOU_POSITIVE=0.5
 IOU_SELECT=0.7
 
-RPN_POSITIVE_NUM=150
-RPN_TOTAL_NUM=300
-IMAGE_MEAN=[123.68, 116.779, 103.939]
-# OHEM=True
+
+RPN_POSITIVE_NUM=128
+RPN_NEGATIVE_NUM=RPN_POSITIVE_NUM * 3
+RPN_TOTAL_NUM=RPN_POSITIVE_NUM + RPN_NEGATIVE_NUM
+# IMAGE_MEAN=[123.68, 116.779, 103.939]
+IMAGE_SIZE = [1024, 2048]
+IMAGE_STD = [0.20037157, 0.18366718, 0.19631825]
+IMAGE_MEAN = [0.90890862, 0.91631571, 0.90724233]
 OHEM=False
+# OHEM=False
 '''
 anchor generation
 문제: 먼저 base_anchor이 초기 위치 지점에 대해 생성된 anchor은 단계별로 feature map의 각 지점에 anchor을 생성한 후 anchor의 shape는 (10, H*W, 4)가 된다.
@@ -17,7 +23,8 @@ anchor generation
 원인: 직접 (10, H*W, 4) -> (10*H*W, 4), anchor의 배열 순서는 feature map의 점순이 아닌 다른 총 10개의 anchor의 모양으로 배열이 된다.
 '''
 def gen_anchor( featuresize, scale, 
-                heights = [11, 16, 23, 33, 48, 68, 97, 139, 198, 283], 
+                # heights = [11, 16, 23, 33, 48, 68, 97, 139, 198, 283], 
+                heights = [11, 15, 22, 32,45, 65, 93, 133, 190, 273],
                 widths = [16, 16, 16, 16, 16, 16, 16, 16, 16, 16]):
     h, w = featuresize
     shift_x = np.arange(0, w) * scale
@@ -144,7 +151,7 @@ def cal_rpn(imgsize, featuresize, scale, gtboxes):
     base_anchor = gen_anchor(featuresize, scale)
     overlaps = compute_iou(base_anchor, gtboxes)
 
-    gt_argmax_overlaps = overlaps.argmax(axis=0)
+    gt_argmax_overlaps = overlaps.argmax(axis=0) ## condition(2) 가장 IoU overlap의 값이 큰 Ground Truth Box를 사용
     anchor_argmax_overlaps = overlaps.argmax(axis=1)
     anchor_max_overlaps = overlaps[range(overlaps.shape[0]), anchor_argmax_overlaps]
 
@@ -247,12 +254,12 @@ class TextLineCfg:
     TEXT_PROPOSALS_WIDTH = 16
     MIN_NUM_PROPOSALS = 2
     MIN_RATIO = 0.5
-    LINE_MIN_SCORE = 0.9
-    TEXT_PROPOSALS_MIN_SCORE = 0.7
+    LINE_MIN_SCORE = 0.9 # 0.7
+    TEXT_PROPOSALS_MIN_SCORE = 0.9 # 0.7
     TEXT_PROPOSALS_NMS_THRESH = 0.3
-    MAX_HORIZONTAL_GAP = 60
-    MIN_V_OVERLAPS = 0.6
-    MIN_SIZE_SIM = 0.6
+    MAX_HORIZONTAL_GAP = 60 # 60
+    MIN_V_OVERLAPS = 0.7 # 0.6
+    MIN_SIZE_SIM = 0.7 # 0.6
 
 
 class TextProposalGraphBuilder:
@@ -278,8 +285,11 @@ class TextProposalGraphBuilder:
 
     def get_precursors(self, index):
         '''
-        순회[x0-MAX_HORIZONTAL_GAP, x0]
-        지정한 인덱스 번호의 이전 텍스트 상자를 가져옵니다.
+        Get the previous (right-side) text proposals belonging to the same group of the current text proposals
+        Args
+        index: id of the current vertex
+        Returns
+        List of integer contains the index of suitable text proposals
         '''
         box = self.text_proposals[index]
         results = []
@@ -398,25 +408,36 @@ class TextProposalConnectorOriented:
             (8) 텍스트 줄 기본 데이터 생성
         3. 큰 텍스트 상자 생성
         '''
+        # (1) Group text proposals
         tp_groups = self.group_text_proposals(text_proposals, scores, im_size) 
         
+        # (2) Initialize the list of text bounding scores and boxes
         text_lines = np.zeros((len(tp_groups), 8), np.float32)
+        new_text_lines = np.zeros((len(tp_groups), 4), np.float32)
         for index, tp_indices in enumerate(tp_groups):
             text_line_boxes = text_proposals[list(tp_indices)]
 
             X = (text_line_boxes[:, 0] + text_line_boxes[:, 2]) / 2
             Y = (text_line_boxes[:, 1] + text_line_boxes[:, 3]) / 2
-            x0 = np.min(text_line_boxes[:, 0])
-            x1 = np.max(text_line_boxes[:, 2])
+            x0 = np.min(text_line_boxes[:, 0]) ## xmin
+            x1 = np.max(text_line_boxes[:, 2]) ## xmax
 
             z1 = np.polyfit(X, Y, 1) 
-
+            
+            ## (3) Find the vertical coordinates of the text lines
             offset = (text_line_boxes[0, 2] - text_line_boxes[0, 0]) * 0.5 
-
+            
+            ## find the vertical coordinates of the text lines
             lt_y, rt_y = self.fit_y(text_line_boxes[:, 0], text_line_boxes[:, 1], x0 + offset, x1 - offset)
             lb_y, rb_y = self.fit_y(text_line_boxes[:, 0], text_line_boxes[:, 3], x0 + offset, x1 - offset)
-
+            
+            ##  (4) The average of the scores is the score of the text line
             score = scores[list(tp_indices)].sum() / float(len(tp_indices))
+            
+            new_text_lines[index,0] = x0
+            new_text_lines[index, 1] = min(lt_y, rt_y)
+            new_text_lines[index, 2] = x1
+            new_text_lines[index, 3] = max(lb_y, rb_y)
 
             text_lines[index, 0] = x0
             text_lines[index, 1] = min(lt_y, rt_y)  
@@ -427,7 +448,8 @@ class TextProposalConnectorOriented:
             text_lines[index, 6] = z1[1]
             height = np.mean((text_line_boxes[:, 3] - text_line_boxes[:, 1]))  
             text_lines[index, 7] = height + 2.5
-
+        
+        new_text_lines = clip_bbox(new_text_lines, im_size)
         text_recs = np.zeros((len(text_lines), 9), np.float)
         index = 0
         for line in text_lines:
@@ -470,7 +492,7 @@ class TextProposalConnectorOriented:
             text_recs[index, 8] = line[4]
             index = index + 1
 
-        return text_recs
+        return text_recs, new_text_lines
 
 if __name__=='__main__':
     anchor = gen_anchor((10, 15), 16)

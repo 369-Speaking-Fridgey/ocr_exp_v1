@@ -8,6 +8,7 @@ import datetime
 import numpy as np
 import mlflow
 import random
+import torchvision.transforms as transforms
 import detect_model as DetectModel ## 모델 이름과 model_configuration을 입력으로 넣어줌
 import losses as DetectLoss ## 손싷함수의 이름과 각각의 가중치를 위해서 train_configuration을 입력으로 넣어줌
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
@@ -207,7 +208,7 @@ class Trainer(BaseTrainer):
                     
                     
             elif self.model_cfg['model_name'].upper() == 'CTPN':
-                pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, iou = True)
+                pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, prob_thresh=0.5, iou = True)
                 self.compare(pred_score, self.current_metric_dict)
                 self.current_metric_dict = pred_score
                 loop.set_postfix(self.current_metric_dict)
