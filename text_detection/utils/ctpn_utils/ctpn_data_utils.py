@@ -6,14 +6,14 @@ IOU_NEGATIVE=0.3
 IOU_POSITIVE=0.5
 IOU_SELECT=0.7
 
-
-RPN_POSITIVE_NUM=128
+ANCHOR_SHIFT=16
+RPN_POSITIVE_NUM=300
 RPN_NEGATIVE_NUM=RPN_POSITIVE_NUM * 3
 RPN_TOTAL_NUM=RPN_POSITIVE_NUM + RPN_NEGATIVE_NUM
-# IMAGE_MEAN=[123.68, 116.779, 103.939]
-IMAGE_SIZE = [1024, 2048]
-IMAGE_STD = [0.20037157, 0.18366718, 0.19631825]
-IMAGE_MEAN = [0.90890862, 0.91631571, 0.90724233]
+IMAGE_MEAN=[123.68, 116.779, 103.939]
+IMAGE_SIZE = [2080, 1024]
+NEW_IMAGE_STD = [0.5,0.5,0.5] # [0.20037157, 0.18366718, 0.19631825]
+NEW_IMAGE_MEAN = [0.5,0.5,0.5] # [0.90890862, 0.91631571, 0.90724233]
 OHEM=False
 # OHEM=False
 '''
@@ -35,7 +35,7 @@ def gen_anchor( featuresize, scale,
     #base center(x,,y) -> (x1, y1, x2, y2)
     base_anchor = np.array([0, 0, 15, 15])
     xt = (base_anchor[0] + base_anchor[2]) * 0.5
-    yt = (base_anchor[1] + base_anchor[3]) * 0.5
+    yt = (base_anchor[1] + base_anchor[3]) * 0.5 
     heights = np.array(heights).reshape(len(heights), 1)
     widths = np.array(widths).reshape(len(widths), 1)
     x1 = xt - widths * 0.5
@@ -242,22 +242,15 @@ class Graph:
 
         return sub_graphs
 
-'''
-配置参数
-MAX_HORIZONTAL_GAP: 文本行内，文本框最大水平距离
-MIN_V_OVERLAPS: 文本框最小垂直iou
-MIN_SIZE_SIM: 文本框尺寸最小相似度
-'''
+
 class TextLineCfg:
-    SCALE = 600
-    MAX_SCALE = 1200
     TEXT_PROPOSALS_WIDTH = 16
     MIN_NUM_PROPOSALS = 2
     MIN_RATIO = 0.5
     LINE_MIN_SCORE = 0.9 # 0.7
-    TEXT_PROPOSALS_MIN_SCORE = 0.9 # 0.7
-    TEXT_PROPOSALS_NMS_THRESH = 0.3
-    MAX_HORIZONTAL_GAP = 60 # 60
+    TEXT_PROPOSALS_MIN_SCORE = 0.5 # 0.7
+    TEXT_PROPOSALS_NMS_THRESH = 0.5
+    MAX_HORIZONTAL_GAP = 20 # 60
     MIN_V_OVERLAPS = 0.7 # 0.6
     MIN_SIZE_SIM = 0.7 # 0.6
 
@@ -495,4 +488,7 @@ class TextProposalConnectorOriented:
         return text_recs, new_text_lines
 
 if __name__=='__main__':
-    anchor = gen_anchor((10, 15), 16)
+    anchor = gen_anchor((2048 //16, 1024//16), 16)
+    for a in anchor:
+        print(a)
+    print(len(anchor))

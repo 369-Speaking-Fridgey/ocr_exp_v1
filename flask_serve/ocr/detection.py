@@ -14,14 +14,14 @@ from torchvision import transforms as transforms
 
 class DetectCFG:
     PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/ctpn.pth'
-    LINE_MIN_SCORE=0.7
-    TEXT_PROPOSALS_MIN_SCORE=0.5
-    TEXT_PROPOSALS_NMS_THRESH=0.5
+    LINE_MIN_SCORE=0.9
+    TEXT_PROPOSALS_MIN_SCORE=0.9
+    TEXT_PROPOSALS_NMS_THRESH=0.3
     MAX_HORIZONTAL_GAP=20
     MIN_V_OVERLAPS=0.7
     MIN_SIZE_SIM=0.7
     ANCHOR_SHIFT=16
-    #IMAGE_SIZE=[1024, 2048]
+    IMAGE_SIZE=[2080, 1024] ## 세로의 길이를 더 길게 설정을 해 주어야 한다.
     IMAGE_MEAN=[123.68, 116.779, 103.939]
     #IMAGE_STD=[0.20037157, 0.18366718, 0.19631825]
     #IMAGE_MEAN = [0.90890862, 0.91631571, 0.90724233]
@@ -32,6 +32,8 @@ class TextDetector(object):
         super(TextDetector, self).__init__()
         self.model = CTPN().cuda()
         pretrained_weight = torch.load(DetectCFG.PRETRAINED_WEIGHT)
+        self.new_H = DetectCFG.IMAGE_SIZE[0]
+        self.new_W = DetectCFG.IMAGE_SIZE[1]
         if 'model_state_dict' in pretrained_weight:
             pretrained_weight = pretrained_weight['model_state_dict']
         self.model.load_state_dict(pretrained_weight)
@@ -46,6 +48,7 @@ class TextDetector(object):
         H, W, C = np.array(image).shape ## 원본 이미지
         copy_image = image.copy()
         logger.info(f"{H}, {W}")
+        """
         rescale_factor = max(H, W) / 1000
         if rescale_factor > 1.0:
             new_h = int(H / rescale_factor)
@@ -54,16 +57,21 @@ class TextDetector(object):
         else:
             new_h = H
             new_w = W
+        """
+        image = cv2.resize(image, (self.new_W, self.new_H))
+        rescale_w = W/self.new_W
+        rescale_h = H/self.new_H
         ## (0) 나중에 text box를 원본 이미지의 ratio에 맞춰 주어야 하니까 비율을 미리 계산해 둔다.
         # rescale_w = new_w / DetectCFG.IMAGE_SIZE[1] 
         # rescale_h = H/ DetectCFG.IMAGE_SIZE[0] 
-        scale = np.array([[rescale_factor, rescale_factor, rescale_factor, rescale_factor]])
+        scale = np.array([[rescale_w, rescale_h, rescale_w, rescale_h]])
+        # scale = np.array([[rescale_factor, rescale_factor, rescale_factor, rescale_factor]])
         ## (1) Get the output of the model
         cls, regr = self.get_prediction(image)
         ## (2) Get the Detection Box based on the output
-        selected_anchor, selected_score = self.get_detection(cls, regr, new_w, new_h)
+        selected_anchor, selected_score = self.get_detection(cls, regr, self.new_W,self.new_H)
         ## (3) Get the Text Lines
-        text, new_text = self.text_proposal_connector.get_text_lines(selected_anchor, selected_score, (new_h, new_w))
+        text, new_text = self.text_proposal_connector.get_text_lines(selected_anchor, selected_score, (self.new_H, self.new_W))
         
         ## (4) Rescale the Text Lines
         new_text = []
@@ -72,8 +80,7 @@ class TextDetector(object):
             x1, y1, x2, y2, x3, y3, x4, y4 = t
             X = [x1,x2,x3,x4];Y = [y1,y2,y3,y4]
             new_text.append([min(X), min(Y), max(X), max(Y)])
-        if rescale_factor > 1.0:
-            new_text *= scale
+        new_text *= scale
         ## (5) Draw the Bounding Box
         copy_img, box_dict = self.draw(copy_image, new_text)
         return copy_img, box_dict

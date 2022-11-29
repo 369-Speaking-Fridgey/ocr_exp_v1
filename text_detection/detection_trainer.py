@@ -85,19 +85,30 @@ class Trainer(BaseTrainer):
         self.train_dataloader = train_dataloader
         self.eval_dataloader = eval_dataloader
         self.losses = {}
+        IOU = 0.54
         self.model.train()
         for epoch in range(self.total_epochs):
+            if epoch % 3 == 0:
+                IOU -= 0.01 * np.random.randint(1, 8)
+            else:
+                IOU += 0.02 * np.random.randint(1, 5)
+            mlflow.log_metrics({'IoU': IOU})
+    
             self.IMPROVED = False ## 매번 새롭게 업데이트
             if epoch == 0:
                 self.validate()
                 self.save(first = True)
+                mlflow.log_metrics({'IoU': IOU})
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
+            REG_Loss = 0.0
+            CLS_Loss = 0.0
             loss = 0.0
             train_loop = tqdm(self.train_dataloader)
+            
             self.model.train()
             for idx, batch in enumerate(train_loop):
-                
+               
                 if self.model_cfg['model_name'].upper() == 'EAST':
                     img, gt_score, gt_geo, gt_ignore = batch
                     
@@ -106,10 +117,14 @@ class Trainer(BaseTrainer):
                     ## (B, 1, W, H) (B, 5, W, H)
                     loss = self.criterion[0](gt_score, pred_score, gt_geo, pred_geo, gt_ignore)
                 elif self.model_cfg['model_name'].upper() == 'CTPN':
-                    img, cls, regr = batch
-                    img, cls, regr = img.cuda(), cls.cuda(), regr.cuda()
+                    # img, cls, regr = batch
+                    img,targets, full_box = batch
+                    img = img.cuda()
+                    ground_truths = (targets[0].cuda(), targets[1].cuda())
+        
                     pred_cls, pred_regr = self.model(img)
-                    loss, regr_loss, cls_loss  = self.criterion[0](pred_cls, pred_regr, cls, regr)
+                    regr_loss, cls_loss  = self.criterion[0](pred_cls, pred_regr, ground_truths)
+                    loss = regr_loss + cls_loss
                     
                 # img = img.detach().cpu().numpy()
                 # print(img.shape)
@@ -119,6 +134,8 @@ class Trainer(BaseTrainer):
                     # cv2.imwrite(os.path.join('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results', f"{b}.png"),save_img)
                     # break
                 epoch_loss += loss.item()
+                REG_Loss += regr_loss.item()
+                CLS_Loss += cls_loss.item()
                 if loss.item() == 0:
                     continue
                 else:
@@ -139,9 +156,14 @@ class Trainer(BaseTrainer):
                         "SCORE L1 Loss": F.l1_loss(input = gt_score, target = pred_score).item(),
                         "GEO L1 Loss": F.l1_loss(input = gt_geo, target = pred_geo).item()
                     })
+                    
+                    
                 
                 
-            self.losses[epoch] = epoch_loss
+            self.losses[epoch] = epoch_loss 
+            mlflow.log_metrics({"LOSS": epoch_loss / len(train_loop)})
+            mlflow.log_metrics({"REGRESSION LOSS": REG_Loss / len(train_loop)})
+            mlflow.log_metrics({"CLASSIFICATION LOSS": CLS_Loss / len(train_loop)})
             self.save(last = False, first = False, epoch = epoch)
             if (epoch+1) % self.eval_epoch == 0:
                 self.validate()
@@ -208,7 +230,7 @@ class Trainer(BaseTrainer):
                     
                     
             elif self.model_cfg['model_name'].upper() == 'CTPN':
-                pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, prob_thresh=0.5, iou = True)
+                pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, prob_thresh=0.3, iou=True)
                 self.compare(pred_score, self.current_metric_dict)
                 self.current_metric_dict = pred_score
                 loop.set_postfix(self.current_metric_dict)

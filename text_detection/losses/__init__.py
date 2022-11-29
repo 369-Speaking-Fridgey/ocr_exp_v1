@@ -3,11 +3,11 @@ from .dice_loss import *
 from .iou_loss import *
 from .l1_loss import MaskL1Loss, BalanceL1Loss
 from .east_loss import dice_loss, geo_loss, EASTLoss
-from .ctpn_loss import CTPNLoss
+from .ctpn_loss import CTPNLoss, MultiBoxLoss
 
 loss_registry = {
     "EASTLOSS": EASTLoss,
-    "CTPNLOSS": CTPNLoss,
+    "CTPNLOSS": MultiBoxLoss,# CTPNLoss,
     "BALANCEDCE": BalanceCrossEntropyLoss,
     "BALNCEDL1": BalanceL1Loss,
     "MASKL1": MaskL1Loss

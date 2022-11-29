@@ -22,6 +22,7 @@ for folder in folders:
             image_file = image_archive.read(image_files[0])
             image = Image.open(io.BytesIO(image_file))
             image = np.array(image)
+            print(image.shape)
             for i in range(3):
                 mean[i] += image[:,:,i].mean()
                 std[i] += image[:,:,i].std()

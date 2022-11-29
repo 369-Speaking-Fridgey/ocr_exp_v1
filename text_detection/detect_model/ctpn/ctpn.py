@@ -67,8 +67,8 @@ class CTPN(nn.Module):
         cls = cls.permute(0, 2, 3, 1).contiguous() ## (B, H', W', 20)
         regression = regression.permute(0, 2, 3, 1).contiguous() ## (B, H', W', 20)
         
-        cls = cls.view(cls.size(0), cls.size(1) * cls.size(2) * 10, 2)
-        regression = regression.view(regression.size(0), regression.size(1) * regression.size(2) * 10, 2)
+        cls = cls.contiguous().view(cls.size(0), cls.size(1) * cls.size(2) * 10, 2)
+        regression = regression.contiguous().view(regression.size(0), regression.size(1) * regression.size(2) * 10, 2)
         """
         - score: text/nontext score
         - vertical_pred: vertical coordinates
