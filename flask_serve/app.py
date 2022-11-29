@@ -7,7 +7,7 @@ import io
 sys.path.append(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
 from ocr.detection import TextDetector
-from ocr.recognition import Recognition
+from ocr.recognition import TextRecognizer
 ROOT=os.path.dirname(os.path.abspath(__file__))
 BASE=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE)
@@ -28,12 +28,16 @@ def predict():
         """
         image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         detector = TextDetector()
+        recognizer = TextRecognizer()
         box_image, box_dict = detector.run(image)
+        text_image, text_dict = recognizer.run(box_dict, image)
         cv2.imwrite(os.path.join(ROOT,'static', 'org.jpg'), image)
         cv2.imwrite(os.path.join(ROOT, 'static', 'box.jpg'), box_image)
+        cv2.imwrite(os.path.join(ROOT, 'static', 'text.jpg'), np.array(text_image))
         return render_template('predict.html', 
                                 box_img='/static/box.jpg', 
-                                original_img='/static/org.jpg')
+                                original_img='/static/org.jpg',
+                                text_img = '/static/text.jpg')
         
 
 if __name__ == "__main__()":
