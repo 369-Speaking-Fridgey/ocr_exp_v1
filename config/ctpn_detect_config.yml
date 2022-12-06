@@ -13,11 +13,11 @@ model_configuration:
 data_configuration:
   label_path: !!str "/home/ubuntu/user/jihye.lee/data/new_box_data.zip"
   img_path: 
-    #- "image_data-20221112T142753Z-001.zip" 
-    #- "image_data-20221112T142753Z-002.zip"
-    #- "image_data-20221112T142753Z-003.zip" 
-    #- "image_data-20221112T142753Z-004.zip" 
-    #- "image_data-20221112T142753Z-005.zip" 
+    - "image_data-20221112T142753Z-001.zip" 
+    - "image_data-20221112T142753Z-002.zip"
+    - "image_data-20221112T142753Z-003.zip" 
+    - "image_data-20221112T142753Z-004.zip" 
+    - "image_data-20221112T142753Z-005.zip" 
     - "image_data-20221112T142753Z-006.zip" 
     - "image_data-20221112T142753Z-007.zip" 
     - "image_data-20221112T142753Z-008.zip" 
@@ -40,7 +40,7 @@ train_configuration:
   epoch: !!int 30
   eval_epoch: !!int 5
   eval_weight: !!str "/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results"
-  learning_rate: !!float 1e-4
+  learning_rate: !!float 2e-5
   optimizer: !!str "adam"
   weight_decay: !!float 1e-8
   scheduler: !!str "warm up"

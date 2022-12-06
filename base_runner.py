@@ -7,6 +7,7 @@ from loguru import logger
 from torch.utils.data import DataLoader
 import argparse
 import importlib
+import mlflow
 
 mode_registery = {
     0: ('text_detection', 'east_detect_config.yml', 
@@ -48,7 +49,7 @@ class TrainerEntry():
         ret = trainer.run(
             train_dataloader, eval_dataloader
         )
-        trainer.mlops.end_run()
+        mlflow.end_run()
         
         return ret
 

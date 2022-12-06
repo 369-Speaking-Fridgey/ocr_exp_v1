@@ -11,7 +11,7 @@ from dtr.transformation import TPS_SpatialTransformerNetwork
 
 class Model(nn.Module):
     def __init__(self, class_n, imgH=32, imgW=128, 
-                    input_channel=3, output_channel=512,
+                    input_channel=1, output_channel=512,
                     hidden_size=256, num_fiducial=20):
         super(Model, self).__init__()
         self.stages = {
@@ -57,3 +57,15 @@ class Model(nn.Module):
             prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=25)
 
         return prediction
+
+
+if __name__ == "__main__":
+    MODEL_PATH='/home/ubuntu/user/jihye.lee/ocr_exp_v1/flask_serve/model'
+    import os, torch
+    path = os.path.join(MODEL_PATH, 'best_accuracy.pth')
+    model = Model(class_n = 984).cuda()
+    pretrained = torch.load(path)
+    for key, value in model.state_dict().items():
+        print(key)
+    for key, value in pretrained.items():
+        print(key)

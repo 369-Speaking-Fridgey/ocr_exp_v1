@@ -30,7 +30,7 @@ def predict():
         detector = TextDetector()
         recognizer = TextRecognizer()
         box_image, box_dict = detector.run(image)
-        text_image, text_dict = recognizer.run(box_dict, image)
+        _, text_image, text_dict = recognizer.run(box_dict, image)
         cv2.imwrite(os.path.join(ROOT,'static', 'org.jpg'), image)
         cv2.imwrite(os.path.join(ROOT, 'static', 'box.jpg'), box_image)
         cv2.imwrite(os.path.join(ROOT, 'static', 'text.jpg'), np.array(text_image))

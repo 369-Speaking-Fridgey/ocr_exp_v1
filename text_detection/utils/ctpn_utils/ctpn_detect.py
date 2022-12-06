@@ -137,7 +137,8 @@ class TextDetector:
             configs: The configuration file.
             
         """
-        self.CONF_SCORE=0.5
+        self.CONF_SCORE=0.9
+        self.IOU_THRESH=0.3
         self.text_proposal_connector: object = TextProposalConnector()
 
     def __call__(self,
@@ -192,7 +193,7 @@ class TextDetector:
         # Perform the non-max-suppression to eliminate unnecessary bounding boxes.
         candidates = nms(bboxes=selected_bboxes,
                          scores=selected_scores,
-                         iou_threshold=0.3)
+                         iou_threshold=self.IOU_THRESH)
 
         selected_bboxes, selected_scores = selected_bboxes[candidates], selected_scores[candidates]
         # Taking the text lines.

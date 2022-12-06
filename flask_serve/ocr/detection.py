@@ -7,21 +7,25 @@ import cv2
 from loguru import logger
 import os, sys
 BASE=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE)
 sys.path.append(os.path.dirname(BASE))
 from text_detection.utils.ctpn_utils import ctpn_detect, ctpn_data_utils
 from text_detection.detect_model.ctpn.ctpn import CTPN
 from torchvision import transforms as transforms
+from ocr.preprocess import preprocess
 
 class DetectCFG:
-    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/ctpn.pth'
-    LINE_MIN_SCORE=0.9
+    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/2022-12-01 15:32:38/best.pt'
+    # PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/ctpn.pth'
+    LINE_MIN_SCORE=0.7
     TEXT_PROPOSALS_MIN_SCORE=0.9
     TEXT_PROPOSALS_NMS_THRESH=0.3
-    MAX_HORIZONTAL_GAP=20
+    MAX_HORIZONTAL_GAP=70
     MIN_V_OVERLAPS=0.7
     MIN_SIZE_SIM=0.7
     ANCHOR_SHIFT=16
-    IMAGE_SIZE=[2080, 1024] ## 세로의 길이를 더 길게 설정을 해 주어야 한다.
+    IMAGE_SIZE= [2048, 1536] #[1024, 768]
+    # IMAGE_SIZE=[2080, 1024] ## 세로의 길이를 더 길게 설정을 해 주어야 한다.
     IMAGE_MEAN=[123.68, 116.779, 103.939]
     #IMAGE_STD=[0.20037157, 0.18366718, 0.19631825]
     #IMAGE_MEAN = [0.90890862, 0.91631571, 0.90724233]
@@ -45,19 +49,34 @@ class TextDetector(object):
         Outputs
         new_text: list형태인데 모든 감지된 bounding box의 (minx, miny, maxX, maxY)의 값을 갖는다.ㄴ
         """
+        #image = preprocess(image)
+        copy_image = image.copy()
         H, W, C = np.array(image).shape ## 원본 이미지
+        max_len = max(H, W)
+        """
+        new_image = np.ones((max_len, max_len,C)) * 255
+        start_x =(max_len - W) // 2;start_y = (max_len - H)//2
+        new_image[start_y:start_y + H, start_x:start_x + W,:] = image
+        self.new_W = self.new_H = max_len
+        """
+        if H > W:
+            self.new_H = 2048
+            self.new_W = int(2048 / H) * W
+        else:
+            self.new_W = 2048
+            self.new_H = int(2048 / W) * H
+        
         copy_image = image.copy()
         logger.info(f"{H}, {W}")
+
         """
-        rescale_factor = max(H, W) / 1000
+        rescale_factor = 2048 / max(H, W)
         if rescale_factor > 1.0:
-            new_h = int(H / rescale_factor)
-            new_w = int(W / rescale_factor)
-            image = cv2.resize(image, (new_w, new_h))
-        else:
-            new_h = H
-            new_w = W
+            self.new_H = int(H * rescale_factor)
+            self.new_W = int(W * rescale_factor)
+            #image = cv2.resize(image, (new_w, new_h))
         """
+        
         image = cv2.resize(image, (self.new_W, self.new_H))
         rescale_w = W/self.new_W
         rescale_h = H/self.new_H
@@ -74,6 +93,8 @@ class TextDetector(object):
         text, new_text = self.text_proposal_connector.get_text_lines(selected_anchor, selected_score, (self.new_H, self.new_W))
         
         ## (4) Rescale the Text Lines
+        #x_diff = (max_len-W)//2
+        #y_diff = (max_len-H)//2
         new_text = []
         for t in text:
             t = [int(i) for i in t][:8]
@@ -93,7 +114,7 @@ class TextDetector(object):
         for idx, box in enumerate(new_text):
             logger.info(box)
             x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])
-            cv2.rectangle(copy_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.rectangle(copy_img, (x1, y1), (x2, y2), (255, 0, 0), 1)
             
         cv2.imwrite('./result.png',copy_img)
 
