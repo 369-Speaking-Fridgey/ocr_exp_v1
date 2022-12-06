@@ -294,17 +294,14 @@ class NewCTPNDataset(BASEDataset):
         # reshape_w, reshape_h = ctpn_utils.IMAGE_SIZE[1], ctpn_utils.IMAGE_SIZE[0]
         if H > W:
             reshape_h = 2048
-            if H<=2048:
-                reshape_w = int(2048 / H) * W
-            else:
-                reshape_w = int(H/2048) * W
+            reshape_w = int((2048 / H)* W)
+            reshape_w = (reshape_w // 16) * 16
             
         else:
             reshape_w = 2048
-            if W <= 2048:
-                reshape_h = int(2048 / W) * H
-            else:
-                reshape_h = int(W / 2048) * H
+            reshape_h = int((2048 / W) * H)
+            reshape_h = (reshape_h // 16) * 16
+            
         rescale_w = reshape_w/W
         rescale_h = reshape_h/H
         scale = [[rescale_w, rescale_h, rescale_w, rescale_h]]
@@ -332,6 +329,9 @@ class NewCTPNDataset(BASEDataset):
         image = torch.from_numpy(img).float()
         all_box = transforms.ToTensor()(all_box)
         gt_bbox = transforms.ToTensor()(gt_bbox)
+        # target_trasnsform에서 고정된 width와 정해준 height를 갖는 anchor들을 생성해 준다.
+        # 결과적으로 모델의 GRU layer의 output의 dimension의 개수가 anchor의 개수이고 regression output의 0axis값은
+        # 중심좌표의 y축 위치, 그리고 1 axis값은 anchor의 높이를 의미하게 될 것이다.
         target_transform = anchor_data.TargetTransform()(
             gt_boxes = gt_bbox.clone(),
             image_size = image.shape[1:3],
