@@ -96,7 +96,7 @@ class Trainer(BaseTrainer):
     
             self.IMPROVED = False ## 매번 새롭게 업데이트
             if epoch == 0:
-                #self.validate()
+                # self.validate()
                 self.save(first = True)
                 mlflow.log_metrics({'IoU': IOU})
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")

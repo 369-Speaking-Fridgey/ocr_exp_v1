@@ -28,8 +28,8 @@ def step2(gray_img):
 
 ## Step3: Need to set the ellipse size at first and do morphological thing.
 def step3(thresh):
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,# cv2.MORPH_ELLIPSE, 
-                                       (int(thresh.shape[1]/40), int(thresh.shape[0]/18)))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,# cv2.MORPH_ELLIPSE, 
+                                       (int(thresh.shape[1]/4), int(thresh.shape[0]/4)))
     morpho_image = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
     ## Opening 과정을 통해서 작은 객체나 돌기 제거 등을 한다.
     morpho_image = cv2.erode(morpho_image, None, iterations=1)
@@ -64,5 +64,9 @@ def preprocess(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     thresh = step2(gray_image)
     morpho_image = step3(thresh)
-    croped, _,_,_ = step4(morpho_image, image)
-    return croped
+    croped, x1,y1,_ = step4(morpho_image, image)
+    new_H, new_W, _ = croped.shape
+    H, W, C = image.shape
+    org = np.ones((H, W, C)) * 255
+    org[y1:y1 + new_H, x1:x1 + new_W, :] = croped
+    return org

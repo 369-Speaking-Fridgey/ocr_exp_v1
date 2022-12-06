@@ -291,16 +291,29 @@ class NewCTPNDataset(BASEDataset):
         text_file_name = self.img_files[folder_no][file_no].split('/')[-1].replace('jpg', 'txt')
         label_data = self.label_archive.read(text_file_name).decode('utf-8') ## read the text label data
         gt_bbox, all_box = self.parse_gtbox(label_data)
-        reshape_w, reshape_h = ctpn_utils.IMAGE_SIZE[1], ctpn_utils.IMAGE_SIZE[0]
+        # reshape_w, reshape_h = ctpn_utils.IMAGE_SIZE[1], ctpn_utils.IMAGE_SIZE[0]
+        if H > W:
+            reshape_h = 2048
+            if H<=2048:
+                reshape_w = int(2048 / H) * W
+            else:
+                reshape_w = int(H/2048) * W
+            
+        else:
+            reshape_w = 2048
+            if W <= 2048:
+                reshape_h = int(2048 / W) * H
+            else:
+                reshape_h = int(W / 2048) * H
         rescale_w = reshape_w/W
         rescale_h = reshape_h/H
         scale = [[rescale_w, rescale_h, rescale_w, rescale_h]]
         all_box *= scale
         gt_bbox *= scale
         img = transforms.Compose([
-            transforms.Resize(size = ctpn_utils.IMAGE_SIZE)
+            transforms.Resize(size = (reshape_h, reshape_w))
         ])(img)
-        #logger.info(f"{rescale_w}, {rescale_h}")
+        # logger.info(f"{reshape_w}, {reshape_h}")
         img, gt_bbox = self.split_bbox(img, gt_bbox)
         copy_img = np.array(img.copy())
         for box in all_box:
