@@ -138,7 +138,7 @@ class TextDetector:
             
         """
         self.CONF_SCORE=0.9
-        self.IOU_THRESH=0.3
+        self.IOU_THRESH=0.2
         self.text_proposal_connector: object = TextProposalConnector()
 
     def __call__(self,
@@ -173,7 +173,7 @@ class TextDetector:
         anchor_boxes = generate_all_anchor_boxes(
             feature_map_size=feature_map_size,
             feat_stride=16,
-            anchor_heights= [11, 15, 22, 32, 45, 65, 93, 133, 190, 273],
+            anchor_heights= [7, 11, 15, 22, 32, 45, 65, 93, 133, 190,],#  273],
             anchor_shift=anchor_shift
         )
 

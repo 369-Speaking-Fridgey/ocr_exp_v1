@@ -29,7 +29,7 @@ def step2(gray_img):
 ## Step3: Need to set the ellipse size at first and do morphological thing.
 def step3(thresh):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,# cv2.MORPH_ELLIPSE, 
-                                       (int(thresh.shape[1]/4), int(thresh.shape[0]/4)))
+                                       (int(thresh.shape[1]/5), int(thresh.shape[0]/5)))
     morpho_image = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
     ## Opening 과정을 통해서 작은 객체나 돌기 제거 등을 한다.
     morpho_image = cv2.erode(morpho_image, None, iterations=1)
@@ -60,7 +60,20 @@ def step4(morpho_image, original_image):
 
   return croped, x1, y1, draw_box
 
-def preprocess(image):
+def preprocess_for_recognition(image):
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    thresh = step2(gray_image)
+    morpho_image = step3(thresh)
+    croped, x1,y1,box = step4(morpho_image, image)
+    new_H, new_W, _ = croped.shape
+    H, W, C = image.shape
+    org = np.ones((H, W)) * gray_image[0,0]
+    org[y1:y1 + new_H, x1:x1 + new_W] = gray_image[y1:y1 + new_H, x1:x1 + new_W] #croped
+    cv2.imwrite('/home/ubuntu/user/jihye.lee/ocr_exp_v1/flask_serve/img_test_res/box.png', box)
+    cv2.imwrite('/home/ubuntu/user/jihye.lee/ocr_exp_v1/flask_serve/img_test_res/org.png',org)
+    return org
+
+def preprocess_for_detection(image):
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     thresh = step2(gray_image)
     morpho_image = step3(thresh)

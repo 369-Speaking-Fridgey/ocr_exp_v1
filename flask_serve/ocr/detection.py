@@ -12,10 +12,10 @@ sys.path.append(os.path.dirname(BASE))
 from text_detection.utils.ctpn_utils import ctpn_detect, ctpn_data_utils
 from text_detection.detect_model.ctpn.ctpn import CTPN
 from torchvision import transforms as transforms
-from ocr.preprocess import preprocess
+from ocr.preprocess import preprocess_for_detection
 
 class DetectCFG:
-    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/2022-12-01 15:32:38/best.pt'
+    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/2022-12-07 13:01:42/EPOCH2.pt'
     # PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/ctpn.pth'
     LINE_MIN_SCORE=0.7
     TEXT_PROPOSALS_MIN_SCORE=0.9
@@ -43,7 +43,7 @@ class TextDetector(object):
         self.model.load_state_dict(pretrained_weight)
         self.text_proposal_connector = ctpn_detect.TextDetector()
         
-        # self.text_proposal_connector = ctpn_data_utils.TextProposalConnectorOriented()
+     
     
     def run(self, image):
         """ Args
@@ -51,7 +51,6 @@ class TextDetector(object):
         Outputs
         new_text: list형태인데 모든 감지된 bounding box의 (minx, miny, maxX, maxY)의 값을 갖는다.ㄴ
         """
-        #image = preprocess(image)
         copy_image = image.copy()
         H, W, C = np.array(image).shape ## 원본 이미지
         max_len = max(H, W);min_len = min(H, W)
@@ -66,6 +65,7 @@ class TextDetector(object):
         이미지를 어느 정도는 키워 주어야 한다. 
         - 글씨 detect이기 때문에 감지 영역이 작고,이미지의 원본의 scale이 너무 작다면 anchor안에 인식하고 싶은 개별적인 부분이 아닌
         문단 단위의 느낌으로 감지가 되기 때문이다.
+        - CTPN에서 새로운 anchor generator을 사용하기 위해서는 무조건 이미지의 H, W가 16으로 나누어떨어져야 한다.
         """
         if H > W:
             self.new_H = NEW_MAX
@@ -89,25 +89,20 @@ class TextDetector(object):
         """
         
         image = cv2.resize(image, (self.new_W, self.new_H))
-        image = preprocess(image)
+        image = preprocess_for_detection(image)
     
         rescale_w = W/self.new_W
         rescale_h = H/self.new_H
         ## (0) 나중에 text box를 원본 이미지의 ratio에 맞춰 주어야 하니까 비율을 미리 계산해 둔다.
-        # rescale_w = new_w / DetectCFG.IMAGE_SIZE[1] 
-        # rescale_h = H/ DetectCFG.IMAGE_SIZE[0] 
         scale = np.array([[rescale_w, rescale_h, rescale_w, rescale_h]])
-        # scale = np.array([[rescale_factor, rescale_factor, rescale_factor, rescale_factor]])
+        
         ## (1) Get the output of the model
         cls, regr = self.get_prediction(image)
         ## (2) Get the Detection Box based on the output
         selected_anchor, selected_score = self.get_detection(cls, regr, self.new_W,self.new_H)
         ## (3) Get the Text Lines
-        # text, new_text = self.text_proposal_connector.get_text_lines(selected_anchor, selected_score, (self.new_H, self.new_W))
         text, scores = self.text_proposal_connector((regr.detach(), cls.detach()), (self.new_H, self.new_W))
         ## (4) Rescale the Text Lines
-        #x_diff = (max_len-W)//2
-        #y_diff = (max_len-H)//2
         new_text = []
         for t in text:
             """
@@ -143,14 +138,12 @@ class TextDetector(object):
         """ Args
         Returns: A tuple containing the predicted bounding boxes and score
         """
-       #  H, W = DetectCFG.IMAGE_SIZE[0], DetectCFG.IMAGE_SIZE[1]
         H = new_h
         W = new_w
         ## (1) Change all to numpy array
         pred_cls = F.softmax(cls, dim = -1).detach().cpu().numpy()
         pred_regr = regr.detach().cpu().numpy()
         anchor_shift = DetectCFG.ANCHOR_SHIFT
-        #logger.info(f"CLS : {pred_cls.shape} REGR : {pred_regr.shape}")
         feature_map_size = (int(H / anchor_shift), int(W / anchor_shift))
         ## (2) Generate all the anchor boxes
         anchor = ctpn_data_utils.gen_anchor(feature_map_size, anchor_shift)
@@ -177,22 +170,11 @@ class TextDetector(object):
 
 
     def get_prediction(self, image):
-        # image = np.resize(image,(DetectCFG.IMAGE_SIZE[0], DetectCFG.IMAGE_SIZE[1],3))
-        #image = np.array(image)
-        #H, W = DetectCFG.IMAGE_SIZE[0], DetectCFG.IMAGE_SIZE[1]
-        #image=cv2.resize(image, (W, H))
-        # logger.info(image.shape)
         image = image - DetectCFG.IMAGE_MEAN
         image = image.transpose([2, 0, 1])
         image = torch.from_numpy(image).float().unsqueeze(0).cuda()
         logger.info(image.shape)
         
-        #aug = transforms.Compose([
-        #    transforms.Resize(DetectCFG.IMAGE_SIZE),
-        #    transforms.ToTensor(),
-            #transforms.Normalize(mean=DetectCFG.IMAGE_MEAN, std=DetectCFG.IMAGE_STD)
-        #])
-        # tensor_image = aug(image).unsqueeze(0).cuda() ## (1, C, H, W)
         self.model.eval()
         cls, regr = self.model(image)
         return cls, regr

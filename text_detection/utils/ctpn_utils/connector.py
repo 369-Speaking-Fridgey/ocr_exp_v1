@@ -67,9 +67,9 @@ class TextProposalGraphBuilder(object):
             
         """
         self.configs: dict = None
-        self.MIN_V_OVERLAPS=0.9
-        self.MIN_SIZE_SIM=0.9
-        self.MAX_HORI_GAP=70
+        self.MIN_V_OVERLAPS=0.7
+        self.MIN_SIZE_SIM=0.7
+        self.MAX_HORI_GAP=20
 
     def get_successions(self, index: int) -> List[int]:
         """
