@@ -1,4 +1,7 @@
 /deprecated
+!/figures/
+/figures/
+!/figures/*.png
 /custom_ppocr
 /mlruns
 *mlruns
