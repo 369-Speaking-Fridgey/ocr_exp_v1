@@ -85,20 +85,14 @@ class Trainer(BaseTrainer):
         self.train_dataloader = train_dataloader
         self.eval_dataloader = eval_dataloader
         self.losses = {}
-        IOU = 0.54
         self.model.train()
         for epoch in range(self.total_epochs):
-            if epoch % 3 == 0:
-                IOU -= 0.01 * np.random.randint(1, 8)
-            else:
-                IOU += 0.02 * np.random.randint(1, 5)
-            mlflow.log_metrics({'IoU': IOU})
     
             self.IMPROVED = False ## 매번 새롭게 업데이트
             if epoch == 0:
                 # self.validate()
                 self.save(first = True)
-                mlflow.log_metrics({'IoU': IOU})
+                #mlflow.log_metrics({'IoU': IOU})
                 logger.info("FIRST EVALUATION TO CHECK IF ALL IS OK......")
             epoch_loss = 0.0
             REG_Loss = 0.0
@@ -126,13 +120,7 @@ class Trainer(BaseTrainer):
                     regr_loss, cls_loss  = self.criterion[0](pred_cls, pred_regr, ground_truths)
                     loss = regr_loss + cls_loss
                     
-                # img = img.detach().cpu().numpy()
-                # print(img.shape)
-                # for b in range(img.shape[0]):
-                    #save_img = (((img[b,:,:,:].transpose(1, 2, 0) * 0.5) + 0.5) * 255).astype(np.uint8)
-                    # save_img = np.mean(save_img, axis = 2) 
-                    # cv2.imwrite(os.path.join('/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results', f"{b}.png"),save_img)
-                    # break
+              
                 epoch_loss += loss.item()
                 REG_Loss += regr_loss.item()
                 CLS_Loss += cls_loss.item()
@@ -232,7 +220,7 @@ class Trainer(BaseTrainer):
             elif self.model_cfg['model_name'].upper() == 'CTPN':
                 pred_score = ctpn_detect.detect_all(self.eval_dataloader, self.model, prob_thresh=0.3, iou=True)
                 self.compare(pred_score, self.current_metric_dict)
-                self.current_metric_dict = pred_score
+                self.current_metric_dict = pred_score ## IOU score
                 loop.set_postfix(self.current_metric_dict)
             
 
