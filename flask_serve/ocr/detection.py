@@ -15,7 +15,7 @@ from torchvision import transforms as transforms
 from ocr.preprocess import preprocess_for_detection
 
 class DetectCFG:
-    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/2022-12-07 13:01:42/EPOCH2.pt'
+    PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results/2022-12-07 13:01:42/best.pt'
     # PRETRAINED_WEIGHT='/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/weight/ctpn.pth'
     LINE_MIN_SCORE=0.7
     TEXT_PROPOSALS_MIN_SCORE=0.9
