@@ -314,8 +314,8 @@ def detect_while_training_iou(batch, model, prob_thresh = 0.3, new = True):
     # threshold = np.ceil(np.clip(20))
     
         return {"iou": iou}
-        
-        
+    
+################ DEPRECATED #############
         
 def detect_while_training_precision(batch, model, prob_thresh=0.5):
     image, cls, regr, full_boxes = batch

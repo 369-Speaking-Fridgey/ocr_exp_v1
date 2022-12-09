@@ -101,11 +101,11 @@ class BASEDataset(Dataset):
         # self.img_files = [os.path.join(self.data_cfg['img_path'], img_file) for img_file in sorted(os.listdir(self.data_cfg['img_path']))]
         # self.label_files = [os.path.join(self.data_cfg['label_path'], label_file) for label_file in sorted(os.listdir(self.data_cfg['label_path']))]
         img_zip_path = data_cfg['img_path'] ## list type
-        img_zip_path = list(map(lambda x: os.path.join('/home/ubuntu/user/jihye.lee/data/detection_aihub', x), img_zip_path))
+        img_zip_path = list(map(lambda x: os.path.join('/home/ubuntu/user/jihye.lee/data', x), img_zip_path))
         self.img_zip_path = {
             key: value for (key, value) in zip([int(i) for i in range(len(img_zip_path))], img_zip_path)
         }
-        self.label_zip_path = data_cfg['label_path']
+        self.label_zip_path = os.path.join('/home/ubuntu/user/jihye.lee/data', data_cfg['label_path'])
         self.img_archive = {}
         for key, value in self.img_zip_path.items():
             self.img_archive[key] = zipfile.ZipFile(value, 'r')

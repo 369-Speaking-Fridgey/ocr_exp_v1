@@ -11,21 +11,21 @@ model_configuration:
     freeze_bbone: !!bool True
 
 data_configuration:
-  label_path: !!str "/home/ubuntu/user/jihye.lee/data/new_box_data.zip"
+  label_path: !!str "new_box_data.zip"
   img_path: 
-    - "image_data-20221112T142753Z-001.zip" 
-    - "image_data-20221112T142753Z-002.zip"
-    - "image_data-20221112T142753Z-003.zip" 
-    - "image_data-20221112T142753Z-004.zip" 
-    - "image_data-20221112T142753Z-005.zip" 
-    - "image_data-20221112T142753Z-006.zip" 
-    - "image_data-20221112T142753Z-007.zip" 
-    - "image_data-20221112T142753Z-008.zip" 
-    - "image_data-20221112T142753Z-009.zip" 
-    - "image_data-20221112T142753Z-010.zip" 
-    - "image_data-20221112T142753Z-011.zip" 
-    - "image_data-20221112T142753Z-012.zip" 
-    - "image_data-20221112T142753Z-013.zip"  # "/home/ubuntu/user/jihye.lee/data/detection_aihub/image_data.zip"
+    - "detection_aihub/image_data-20221112T142753Z-001.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-002.zip"
+    - "detection_aihub/image_data-20221112T142753Z-003.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-004.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-005.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-006.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-007.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-008.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-009.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-010.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-011.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-012.zip" 
+    - "detection_aihub/image_data-20221112T142753Z-013.zip"  # "/home/ubuntu/user/jihye.lee/data/detection_aihub/image_data.zip"
   train_data_path: !!str ""
   eval_data_path: !!str ""
   batch_size: !!int 1
@@ -48,7 +48,29 @@ train_configuration:
     loss: !!str "ctpnloss"
     lamda: !!float 1.0
 
-
+detect_configuration:
+  ### ANCHOR GERNERATION PARAMETERS ###
+  ignore_index: -1
+  positive_anchor_label: 1
+  negative_anchor_label: 0
+  positive_jaccard_overlap_threshold: 0.5
+  negative_jaccard_overlap_threshold: 0.3
+  ### DETECTION THRESHOLD PARAMETERS ###
+  CONF_SCORE: !!float 0.9
+  IOU_THRESH: !!float 0.2
+  FEAT_STRIDE: !!int 16
+  ANCHOR_HEIGHTS: 
+    - 7
+    - 11
+    - 15
+    - 22
+    - 32
+    - 45
+    - 65
+    - 93
+    - 133
+    - 190
+  
 eval_configuration:
   weight: !!str "/home/ubuntu/user/jihye.lee/ocr_exp_v1/text_detection/results"
   epoch: !!int 10
