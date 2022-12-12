@@ -53,8 +53,8 @@ detect_configuration:
   ignore_index: -1
   positive_anchor_label: 1
   negative_anchor_label: 0
-  positive_jaccard_overlap_threshold: 0.5
-  negative_jaccard_overlap_threshold: 0.3
+  positive_jaccard_overlap_threshold: 0.7 # 0.5
+  negative_jaccard_overlap_threshold: 0.6 # 0.3
   ### DETECTION THRESHOLD PARAMETERS ###
   CONF_SCORE: !!float 0.9
   IOU_THRESH: !!float 0.2

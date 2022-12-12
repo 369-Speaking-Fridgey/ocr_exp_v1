@@ -128,7 +128,7 @@ class TargetTransform(object):
         anchor_boxes = generate_all_anchor_boxes(
             feature_map_size=feature_map_size,
             feat_stride=16,
-            anchor_heights= [7, 11, 15, 22, 32, 45, 65, 93, 133, 190], #273,
+            anchor_heights= [7, 11, 15, 19, 22, 26, 32, 45, 73, 93] ,  # [7, 11, 15, 22, 32, 45, 65, 93, 133, 190], #273,
             anchor_shift=anchor_shift
         )
 
@@ -224,11 +224,11 @@ def match_anchor_boxes(image_size: Tuple[int, int], anchor_boxes: Tensor, gt_box
 
     positive_anchor_label = 1
 
-    negative_anchor_label =0
+    negative_anchor_label = 0
 
-    positive_jaccard_overlap_threshold = 0.5
-
-    negative_jaccard_overlap_threshold = 0.3
+    positive_jaccard_overlap_threshold = 0.8
+ 
+    negative_jaccard_overlap_threshold = 0.5
 
     # Compute the IoU between anchor and ground truth boxes. # Shape: [M, N]
     

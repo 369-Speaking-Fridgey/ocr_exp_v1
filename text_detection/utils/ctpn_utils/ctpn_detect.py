@@ -173,7 +173,7 @@ class TextDetector:
         anchor_boxes = generate_all_anchor_boxes(
             feature_map_size=feature_map_size,
             feat_stride=16,
-            anchor_heights= [7, 11, 15, 22, 32, 45, 65, 93, 133, 190,],#  273],
+            anchor_heights= [7, 11, 15, 19, 22, 26, 32, 45, 73, 93],  # 65, 93, 133, 190,],#  273],
             anchor_shift=anchor_shift
         )
 
